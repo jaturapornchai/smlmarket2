@@ -125,8 +125,7 @@ class ProductCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Product Name - แสดงเต็มไม่ตัด
+                children: [                  // Product Name - แสดงเต็มไม่ตัด
                   Text(
                     product.name ?? 'ไม่ระบุชื่อสินค้า',
                     style: const TextStyle(
@@ -135,6 +134,46 @@ class ProductCard extends StatelessWidget {
                       height: 1.3,
                     ),
                   ),
+                  // Product Code and Barcode
+                  const SizedBox(height: 2),
+                  Wrap(
+                    spacing: 4,
+                    runSpacing: 2,
+                    children: [
+                      // รหัสสินค้า
+                      if (product.code != null && product.code!.isNotEmpty)
+                        Text(
+                          'รหัส: ${product.code}',
+                          style: TextStyle(
+                            fontSize: 8,
+                            color: Colors.grey[600],
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      // Barcode
+                      if (product.barcodes != null && product.barcodes!.isNotEmpty)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 1,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.orange[100],
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            'BC: ${_getFirstBarcode(product.barcodes!)}',
+                            style: TextStyle(
+                              fontSize: 7,
+                              color: Colors.orange[800],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
                   Wrap(
                     children: [
                       if (product.premiumWord != null &&
@@ -169,7 +208,10 @@ class ProductCard extends StatelessWidget {
                     children: [
                       (product.hasPriceDiscrepancy)
                           ? Text(
-                              'ราคาปกติ: ฿${product.salePrice!.toStringAsFixed(0)}',
+                              product.salePrice != null &&
+                                      product.salePrice! > 0
+                                  ? 'ราคาปกติ: ฿${product.salePrice!.toStringAsFixed(0)}'
+                                  : 'ราคาปกติ: ไม่พบราคา',
                               style: TextStyle(
                                 fontSize: 14,
                                 color: Colors.grey.shade500,
@@ -218,13 +260,17 @@ class ProductCard extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        '฿${product.displayPrice.toStringAsFixed(0)}',
+                        product.displayPrice > 0
+                            ? '฿${product.displayPrice.toStringAsFixed(0)}'
+                            : 'ไม่พบราคา',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          color: product.hasPriceDiscrepancy
-                              ? Colors.red.shade700
-                              : Colors.blue.shade700,
-                          fontSize: 24,
+                          color: product.displayPrice > 0
+                              ? (product.hasPriceDiscrepancy
+                                    ? Colors.red.shade700
+                                    : Colors.blue.shade700)
+                              : Colors.grey.shade600,
+                          fontSize: product.displayPrice > 0 ? 24 : 16,
                           height: 1.0,
                         ),
                       ),
@@ -376,8 +422,13 @@ class ProductCard extends StatelessWidget {
 
     if (rowItems.isEmpty) {
       return const SizedBox.shrink();
-    }
+    }    return Wrap(spacing: 2, runSpacing: 1, children: rowItems);
+  }
 
-    return Wrap(spacing: 2, runSpacing: 1, children: rowItems);
+  // Helper method to get first barcode from comma-separated string
+  String _getFirstBarcode(String barcodes) {
+    if (barcodes.isEmpty) return '';
+    final List<String> barcodeList = barcodes.split(',');
+    return barcodeList.first.trim();
   }
 }

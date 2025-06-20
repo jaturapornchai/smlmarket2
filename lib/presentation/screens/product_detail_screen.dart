@@ -256,19 +256,26 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             Row(
               children: [
                 Text(
-                  '฿${widget.product.displayPrice.toStringAsFixed(0)}',
+                  widget.product.displayPrice > 0
+                      ? '฿${widget.product.displayPrice.toStringAsFixed(0)}'
+                      : 'ไม่พบราคา',
                   style: TextStyle(
-                    fontSize: 28,
+                    fontSize: widget.product.displayPrice > 0 ? 28 : 20,
                     fontWeight: FontWeight.bold,
-                    color: widget.product.hasPriceDiscrepancy
-                        ? Colors.red[700]
-                        : Colors.blue[700],
+                    color: widget.product.displayPrice > 0
+                        ? (widget.product.hasPriceDiscrepancy
+                              ? Colors.red[700]
+                              : Colors.blue[700])
+                        : Colors.grey[600],
                   ),
                 ),
                 const SizedBox(width: 12),
                 if (widget.product.hasPriceDiscrepancy)
                   Text(
-                    '฿${widget.product.salePrice!.toStringAsFixed(0)}',
+                    widget.product.salePrice != null &&
+                            widget.product.salePrice! > 0
+                        ? '฿${widget.product.salePrice!.toStringAsFixed(0)}'
+                        : 'ไม่พบราคา',
                     style: TextStyle(
                       fontSize: 16,
                       color: Colors.grey[500],

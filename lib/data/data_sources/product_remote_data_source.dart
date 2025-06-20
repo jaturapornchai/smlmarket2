@@ -16,7 +16,10 @@ abstract class ProductDataSource {
 class ProductRemoteDataSource implements ProductDataSource {
   final http.Client httpClient;
   final Logger logger;
-  static const String baseUrl = 'http://localhost:8008';
+  //static const String baseUrl = (kDebugMode) ? 'http://localhost:8008' : 'https://smlgoapi.dedepos.com';
+  static const String baseUrl = (kDebugMode)
+      ? 'https://smlgoapi.dedepos.com'
+      : 'https://smlgoapi.dedepos.com';
 
   ProductRemoteDataSource({http.Client? httpClient, Logger? logger})
     : httpClient = httpClient ?? http.Client(),

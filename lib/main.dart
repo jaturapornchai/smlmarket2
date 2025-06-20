@@ -25,6 +25,7 @@ class SmlMarketApp extends StatelessWidget {
 
     return MaterialApp(
       title: 'SML Market',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primarySwatch: Colors.blue,
         useMaterial3: true,
