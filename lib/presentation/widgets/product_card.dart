@@ -125,7 +125,8 @@ class ProductCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
-                children: [                  // Product Name - แสดงเต็มไม่ตัด
+                children: [
+                  // Product Name - แสดงเต็มไม่ตัด
                   Text(
                     product.name ?? 'ไม่ระบุชื่อสินค้า',
                     style: const TextStyle(
@@ -152,7 +153,8 @@ class ProductCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                       // Barcode
-                      if (product.barcodes != null && product.barcodes!.isNotEmpty)
+                      if (product.barcodes != null &&
+                          product.barcodes!.isNotEmpty)
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 4,
@@ -422,7 +424,8 @@ class ProductCard extends StatelessWidget {
 
     if (rowItems.isEmpty) {
       return const SizedBox.shrink();
-    }    return Wrap(spacing: 2, runSpacing: 1, children: rowItems);
+    }
+    return Wrap(spacing: 2, runSpacing: 1, children: rowItems);
   }
 
   // Helper method to get first barcode from comma-separated string

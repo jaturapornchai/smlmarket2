@@ -31,43 +31,8 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
           bottomLeft: Radius.circular(20),
           bottomRight: Radius.circular(20),
         ),
-      ),
-      child: Column(
+      ),      child: Column(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text(
-                'ค้นหาสินค้าที่คุณต้องการ',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.grey,
-                ),
-              ),
-              const SizedBox(width: 8),
-              if (widget.isAiEnabled)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.shade200,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Text(
-                    'AI',
-                    style: TextStyle(
-                      color: Colors.blue,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 16),
           Container(
             decoration: BoxDecoration(
               color: Colors.white,
@@ -80,11 +45,10 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
                   offset: const Offset(0, 3),
                 ),
               ],
-            ),
-            child: TextField(
+            ),            child: TextField(
               controller: widget.controller,
               decoration: InputDecoration(
-                hintText: 'ค้นหาสินค้า...',
+                hintText: widget.isAiEnabled ? 'ค้นหาสินค้าด้วย AI...' : 'ค้นหาสินค้า...',
                 border: InputBorder.none,
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 20,
