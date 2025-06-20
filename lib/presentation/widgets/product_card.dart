@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
 import '../../data/models/product_model.dart';
+import '../screens/product_detail_screen.dart';
 
 class ProductCard extends StatelessWidget {
   final ProductModel product;
   final bool isAiEnabled;
-  final VoidCallback? onTap;
 
   const ProductCard({
     super.key,
     required this.product,
     required this.isAiEnabled,
-    this.onTap,
   });
 
   String _getRandomImageUrl(String productId) {
@@ -47,14 +46,19 @@ class ProductCard extends StatelessWidget {
     final int index = productId.hashCode.abs() % imageUrls.length;
     return imageUrls[index];
   }
-
   @override
   Widget build(BuildContext context) {
     return Card(
       elevation: 3,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       child: InkWell(
-        onTap: onTap,
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => ProductDetailScreen(product: product),
+            ),
+          );
+        },
         borderRadius: BorderRadius.circular(8),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -116,7 +120,7 @@ class ProductCard extends StatelessWidget {
 
             // Product Info Section - ไล่ข้อมูลลงมาตามเนื้อหา
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(4),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
@@ -130,15 +134,11 @@ class ProductCard extends StatelessWidget {
                       height: 1.3,
                     ),
                   ),
-
-                  const SizedBox(height: 6),
-
                   Wrap(
                     children: [
                       if (product.premiumWord != null &&
                           product.premiumWord!.isNotEmpty)
                         Container(
-                          margin: const EdgeInsets.only(bottom: 4),
                           padding: const EdgeInsets.symmetric(
                             horizontal: 6,
                             vertical: 2,
@@ -156,8 +156,6 @@ class ProductCard extends StatelessWidget {
                             ),
                           ),
                         ),
-
-                      // Discount and Info Row
                       if (_hasDiscountOrMultiPacking()) ...[
                         _buildDiscountAndInfoRow(),
                       ],
@@ -179,7 +177,6 @@ class ProductCard extends StatelessWidget {
                               ),
                             )
                           : const SizedBox.shrink(),
-
                       Spacer(),
                       // Sales info
                       (product.hasSoldQty)
@@ -194,7 +191,6 @@ class ProductCard extends StatelessWidget {
                           : const SizedBox.shrink(),
                     ],
                   ),
-                  // AI Score
                   if (product.similarityScore != null && isAiEnabled) ...[
                     Row(
                       mainAxisSize: MainAxisSize.min,
@@ -215,14 +211,10 @@ class ProductCard extends StatelessWidget {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 4),
                   ],
-
-                  // ราคาสุดท้าย - ล่างสุด ตัวใหญ่ขึ้น
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-
                     children: [
                       Text(
                         '฿${product.displayPrice.toStringAsFixed(0)}',

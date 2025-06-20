@@ -5,6 +5,7 @@ import '../cubit/product_search_state.dart';
 import '../widgets/search_bar_widget.dart';
 import '../widgets/product_grid.dart';
 import '../../data/models/product_model.dart';
+import 'product_detail_screen.dart';
 
 class ProductSearchScreen extends StatefulWidget {
   const ProductSearchScreen({super.key});
@@ -35,11 +36,10 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
       _isAiEnabled = !_isAiEnabled;
     });
   }
-
   void _onProductTap(ProductModel product) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('เลือกสินค้า: ${product.name ?? 'ไม่ระบุชื่อสินค้า'}'),
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => ProductDetailScreen(product: product),
       ),
     );
   }

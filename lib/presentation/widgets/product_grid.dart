@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../data/models/product_model.dart';
 import 'product_card.dart';
+import '../screens/product_detail_screen.dart';
 
 class ProductGrid extends StatefulWidget {
   final List<ProductModel> products;
@@ -80,11 +81,9 @@ class _ProductGridState extends State<ProductGrid> {
               // แสดง ProductCard ทั้งหมด
               ...widget.products.map(
                 (product) => SizedBox(
-                  width: cardWidth,
-                  child: ProductCard(
+                  width: cardWidth,                  child: ProductCard(
                     product: product,
                     isAiEnabled: widget.isAiEnabled,
-                    onTap: () => widget.onProductTap?.call(product),
                   ),
                 ),
               ),
