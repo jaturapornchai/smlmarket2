@@ -46,6 +46,7 @@ class ProductCard extends StatelessWidget {
     final int index = productId.hashCode.abs() % imageUrls.length;
     return imageUrls[index];
   }
+
   @override
   Widget build(BuildContext context) {
     return Card(

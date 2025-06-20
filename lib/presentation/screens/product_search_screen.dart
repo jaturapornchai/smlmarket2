@@ -36,6 +36,7 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
       _isAiEnabled = !_isAiEnabled;
     });
   }
+
   void _onProductTap(ProductModel product) {
     Navigator.of(context).push(
       MaterialPageRoute(

@@ -81,7 +81,8 @@ class _ProductGridState extends State<ProductGrid> {
               // แสดง ProductCard ทั้งหมด
               ...widget.products.map(
                 (product) => SizedBox(
-                  width: cardWidth,                  child: ProductCard(
+                  width: cardWidth,
+                  child: ProductCard(
                     product: product,
                     isAiEnabled: widget.isAiEnabled,
                   ),
