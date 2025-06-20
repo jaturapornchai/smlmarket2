@@ -38,7 +38,7 @@ class ProductRemoteDataSource implements ProductDataSource {
         );
       }
 
-      final uri = Uri.parse('$baseUrl/search');
+      final uri = Uri.parse('$baseUrl/v1/search');
       final body = json.encode({
         'query': query,
         'ai': aiEnabled ? 1 : 0,

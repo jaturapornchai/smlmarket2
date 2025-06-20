@@ -52,6 +52,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     final int index = productId.hashCode.abs() % imageUrls.length;
     return imageUrls[index];
   }
+
   void _increaseQuantity() {
     if (quantity < (widget.product.availableQty.toInt())) {
       setState(() {
@@ -69,10 +70,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       });
     }
   }
+
   void _updateQuantityFromInput() {
     final newQuantity = int.tryParse(_quantityController.text) ?? 1;
     final maxQty = widget.product.availableQty.toInt();
-    
+
     setState(() {
       quantity = newQuantity.clamp(1, maxQty);
       _quantityController.text = quantity.toString();
@@ -527,6 +529,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       ),
     );
   }
+
   Widget _buildQuantitySelector() {
     return Card(
       elevation: 2,
@@ -544,7 +547,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            
+
             // ปุ่มแก้ไขจำนวนแบบใหญ่และชัดเจน
             Container(
               padding: const EdgeInsets.all(12),
@@ -572,9 +575,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       ),
                     ),
                   ),
-                  
+
                   const SizedBox(width: 16),
-                  
+
                   // ช่องกรอกจำนวน
                   Expanded(
                     child: Container(
@@ -605,9 +608,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       ),
                     ),
                   ),
-                  
+
                   const SizedBox(width: 16),
-                  
+
                   // ปุ่มเพิ่ม
                   Material(
                     color: quantity < widget.product.availableQty.toInt()
@@ -619,19 +622,16 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       borderRadius: BorderRadius.circular(8),
                       child: Container(
                         padding: const EdgeInsets.all(12),
-                        child: Icon(
-                          Icons.add,
-                          size: 24,
-                          color: Colors.white,
-                        ),
+                        child: Icon(Icons.add, size: 24, color: Colors.white),
                       ),
                     ),
                   ),
-                ],              ),
+                ],
+              ),
             ),
-            
+
             const SizedBox(height: 12),
-            
+
             // ปุ่มแก้ไขจำนวนแบบด่วน
             Text(
               'แก้ไขจำนวนแบบด่วน',
@@ -654,12 +654,15 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   _buildQuickQuantityButton(20, 'x20'),
                 if (widget.product.availableQty >= 50)
                   _buildQuickQuantityButton(50, 'x50'),
-                _buildQuickQuantityButton(widget.product.availableQty.toInt(), 'MAX'),
+                _buildQuickQuantityButton(
+                  widget.product.availableQty.toInt(),
+                  'MAX',
+                ),
               ],
             ),
-            
+
             const SizedBox(height: 12),
-            
+
             // ข้อมูลเพิ่มเติม
             Container(
               padding: const EdgeInsets.all(12),
@@ -672,7 +675,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.info_outline, size: 16, color: Colors.blue[600]),
+                      Icon(
+                        Icons.info_outline,
+                        size: 16,
+                        color: Colors.blue[600],
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -681,7 +688,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                               : 'ถึงจำนวนสูงสุดแล้ว',
                           style: TextStyle(
                             fontSize: 12,
-                            color: quantity < widget.product.availableQty.toInt()
+                            color:
+                                quantity < widget.product.availableQty.toInt()
                                 ? Colors.blue[600]
                                 : Colors.red[600],
                             fontWeight: FontWeight.w500,
@@ -752,7 +760,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   const SizedBox(width: 8),
                   Text(
                     canAddToCart
-                        ? 'เพิ่มลงตะกร้า (${quantity} ชิ้น)'
+                        ? 'เพิ่มลงตะกร้า ($quantity ชิ้น)'
                         : 'สินค้าหมด',
                     style: const TextStyle(
                       fontSize: 16,
@@ -764,19 +772,20 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             ),
           ),
         ],
-      ),    );
+      ),
+    );
   }
 
   Widget _buildQuickQuantityButton(int quantity, String label) {
     final isSelected = this.quantity == quantity;
     final isAvailable = quantity <= widget.product.availableQty.toInt();
-    
+
     return Material(
-      color: isSelected 
-          ? Colors.blue[600] 
-          : isAvailable 
-              ? Colors.white 
-              : Colors.grey[300],
+      color: isSelected
+          ? Colors.blue[600]
+          : isAvailable
+          ? Colors.white
+          : Colors.grey[300],
       borderRadius: BorderRadius.circular(8),
       child: InkWell(
         onTap: isAvailable ? () => _setQuickQuantity(quantity) : null,
@@ -786,11 +795,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: isSelected 
-                  ? Colors.blue[600]! 
-                  : isAvailable 
-                      ? Colors.blue[300]! 
-                      : Colors.grey[400]!,
+              color: isSelected
+                  ? Colors.blue[600]!
+                  : isAvailable
+                  ? Colors.blue[300]!
+                  : Colors.grey[400]!,
             ),
           ),
           child: Text(
@@ -798,11 +807,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: isSelected 
-                  ? Colors.white 
-                  : isAvailable 
-                      ? Colors.blue[600] 
-                      : Colors.grey[600],
+              color: isSelected
+                  ? Colors.white
+                  : isAvailable
+                  ? Colors.blue[600]
+                  : Colors.grey[600],
             ),
           ),
         ),
