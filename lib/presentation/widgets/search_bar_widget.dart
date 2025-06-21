@@ -31,7 +31,8 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
           bottomLeft: Radius.circular(20),
           bottomRight: Radius.circular(20),
         ),
-      ),      child: Column(
+      ),
+      child: Column(
         children: [
           Container(
             decoration: BoxDecoration(
@@ -45,10 +46,13 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
                   offset: const Offset(0, 3),
                 ),
               ],
-            ),            child: TextField(
+            ),
+            child: TextField(
               controller: widget.controller,
               decoration: InputDecoration(
-                hintText: widget.isAiEnabled ? 'ค้นหาสินค้าด้วย AI...' : 'ค้นหาสินค้า...',
+                hintText: widget.isAiEnabled
+                    ? 'ค้นหาสินค้าด้วย AI...'
+                    : 'ค้นหาสินค้า...',
                 border: InputBorder.none,
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 20,

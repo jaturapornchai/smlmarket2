@@ -52,14 +52,25 @@ class _ProductGridState extends State<ProductGrid> {
     final currentScroll = _scrollController.offset;
     return currentScroll >= (maxScroll * 0.9); // Trigger when 90% scrolled
   }
-
   // Function to calculate optimal card width based on screen size
   double _calculateCardWidth(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final spacing = 2.0; // ช่องว่างระหว่าง card ลดลง
 
-    final int columnCount =
-        screenWidth ~/ 200; // คำนวณจำนวน card ที่จะแสดงในแต่ละแถว
+    // คำนวณจำนวนคอลัมน์โดยให้มีอย่างน้อย 2 คอลัมน์เสมอ
+    int columnCount;
+    if (screenWidth < 400) {
+      columnCount = 2; // หน้าจอเล็กมาก ให้ 2 คอลัมน์
+    } else if (screenWidth < 600) {
+      columnCount = 2; // หน้าจอมือถือปกติ ให้ 2 คอลัมน์
+    } else if (screenWidth < 800) {
+      columnCount = 3; // หน้าจอกลาง ให้ 3 คอลัมน์
+    } else if (screenWidth < 1000) {
+      columnCount = 4; // หน้าจอใหญ่ ให้ 4 คอลัมน์
+    } else {
+      columnCount = 5; // หน้าจอใหญ่มาก ให้ 5 คอลัมน์
+    }
+    
     return (screenWidth - (spacing * (columnCount - 1))) / columnCount;
   }
 

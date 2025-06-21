@@ -216,6 +216,7 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
       },
     );
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
