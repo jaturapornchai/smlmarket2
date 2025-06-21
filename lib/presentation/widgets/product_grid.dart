@@ -52,6 +52,7 @@ class _ProductGridState extends State<ProductGrid> {
     final currentScroll = _scrollController.offset;
     return currentScroll >= (maxScroll * 0.9); // Trigger when 90% scrolled
   }
+
   // Function to calculate optimal card width based on screen size
   double _calculateCardWidth(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -82,7 +83,8 @@ class _ProductGridState extends State<ProductGrid> {
       controller: _scrollController,
       physics: const BouncingScrollPhysics(),
       child: Column(
-        children: [          Wrap(
+        children: [
+          Wrap(
             spacing: 1, // ลดช่องว่างระหว่าง card แนวนอน
             runSpacing: 1, // ลดช่องว่างระหว่าง card แนวตั้ง
             alignment: WrapAlignment.start, // เริ่มจากซ้าย

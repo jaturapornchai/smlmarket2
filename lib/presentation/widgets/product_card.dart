@@ -46,6 +46,7 @@ class ProductCard extends StatelessWidget {
     final int index = productId.hashCode.abs() % imageUrls.length;
     return imageUrls[index];
   }
+
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -63,7 +64,8 @@ class ProductCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min, // ให้ Column ขยายตามเนื้อหา
-          children: [            // Product Image Section - ขนาดคงที่
+          children: [
+            // Product Image Section - ขนาดคงที่
             Container(
               height: 120, // ลดความสูงรูปลง
               width: double.infinity,
@@ -115,7 +117,7 @@ class ProductCard extends StatelessWidget {
                   },
                 ),
               ),
-            ),            // Product Info Section - ไล่ข้อมูลลงมาตามเนื้อหา
+            ), // Product Info Section - ไล่ข้อมูลลงมาตามเนื้อหา
             Container(
               padding: const EdgeInsets.all(2), // ลด padding ลงมาก
               child: Column(
@@ -129,7 +131,8 @@ class ProductCard extends StatelessWidget {
                       fontWeight: FontWeight.w600,
                       fontSize: 12,
                       height: 1.3,
-                    ),                  ),
+                    ),
+                  ),
                   // Product Code and Barcode
                   const SizedBox(height: 1), // ลดระยะห่าง
                   Wrap(
@@ -146,7 +149,7 @@ class ProductCard extends StatelessWidget {
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                        ),                      // Barcode
+                        ), // Barcode
                       if (product.barcodes != null &&
                           product.barcodes!.isNotEmpty)
                         Container(
@@ -167,7 +170,8 @@ class ProductCard extends StatelessWidget {
                             ),
                           ),
                         ),
-                    ],                  ),
+                    ],
+                  ),
                   const SizedBox(height: 2), // ลดระยะห่าง
                   Wrap(
                     children: [
@@ -269,7 +273,8 @@ class ProductCard extends StatelessWidget {
                           height: 1.0,
                         ),
                       ),
-                      Spacer(),                      (product.availableQty > 0)
+                      Spacer(),
+                      (product.availableQty > 0)
                           ? Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 3, // ลด padding
@@ -277,7 +282,9 @@ class ProductCard extends StatelessWidget {
                               ),
                               decoration: BoxDecoration(
                                 color: Colors.green.shade100,
-                                borderRadius: BorderRadius.circular(3), // ลด radius
+                                borderRadius: BorderRadius.circular(
+                                  3,
+                                ), // ลด radius
                               ),
                               child: Text(
                                 'คงเหลือ ${product.availableQty.toInt()}',
@@ -287,15 +294,20 @@ class ProductCard extends StatelessWidget {
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
-                            )                          : Container(
-                              margin: const EdgeInsets.only(bottom: 2), // ลด margin
+                            )
+                          : Container(
+                              margin: const EdgeInsets.only(
+                                bottom: 2,
+                              ), // ลด margin
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 3, // ลด padding
                                 vertical: 1,
                               ),
                               decoration: BoxDecoration(
                                 color: Colors.red.shade100,
-                                borderRadius: BorderRadius.circular(3), // ลด radius
+                                borderRadius: BorderRadius.circular(
+                                  3,
+                                ), // ลด radius
                               ),
                               child: Text(
                                 'หมดสต็อก',
