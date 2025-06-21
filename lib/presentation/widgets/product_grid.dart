@@ -55,7 +55,7 @@ class _ProductGridState extends State<ProductGrid> {
   // Function to calculate optimal card width based on screen size
   double _calculateCardWidth(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    final spacing = 2.0; // ช่องว่างระหว่าง card ลดลง
+    final spacing = 1.0; // ลดช่องว่างระหว่าง card ลงเหลือ 1px
 
     // คำนวณจำนวนคอลัมน์โดยให้มีอย่างน้อย 2 คอลัมน์เสมอ
     int columnCount;
@@ -70,7 +70,7 @@ class _ProductGridState extends State<ProductGrid> {
     } else {
       columnCount = 5; // หน้าจอใหญ่มาก ให้ 5 คอลัมน์
     }
-    
+
     return (screenWidth - (spacing * (columnCount - 1))) / columnCount;
   }
 
@@ -82,10 +82,9 @@ class _ProductGridState extends State<ProductGrid> {
       controller: _scrollController,
       physics: const BouncingScrollPhysics(),
       child: Column(
-        children: [
-          Wrap(
-            spacing: 2, // ช่องว่างระหว่าง card แนวนอน
-            runSpacing: 2, // ช่องว่างระหว่าง card แนวตั้ง
+        children: [          Wrap(
+            spacing: 1, // ลดช่องว่างระหว่าง card แนวนอน
+            runSpacing: 1, // ลดช่องว่างระหว่าง card แนวตั้ง
             alignment: WrapAlignment.start, // เริ่มจากซ้าย
             children: [
               // แสดง ProductCard ทั้งหมด
