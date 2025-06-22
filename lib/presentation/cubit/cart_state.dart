@@ -36,15 +36,15 @@ class CartError extends CartState {
 
 class StockCheckSuccess extends CartState {
   final bool hasStock;
-  final double availableQuantity;
-  final int productId;
+  final int availableQuantity;
+  final String icCode;
 
   const StockCheckSuccess({
     required this.hasStock,
     required this.availableQuantity,
-    required this.productId,
+    required this.icCode,
   });
 
   @override
-  List<Object?> get props => [hasStock, availableQuantity, productId];
+  List<Object?> get props => [hasStock, availableQuantity, icCode];
 }

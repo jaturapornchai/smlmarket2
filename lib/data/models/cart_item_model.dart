@@ -6,25 +6,25 @@ import 'order_item_model.dart';
 class CartItemModel extends Equatable {
   final int? id; // รหัสรายการสินค้าในตระกร้า
   final int cartId; // รหัสตระกร้า (FK)
-  final int productId; // รหัสสินค้า (FK)
+  final String icCode; // รหัสสินค้า (FK) - ใช้ ic_code แทน product_id
   final String? barcode; // บาร์โค้ดสินค้า
   final String? unitCode; // รหัสหน่วยสินค้า
   final int quantity; // จำนวนสินค้า
-  final double unitPrice; // ราคาต่อหน่วย
-  final double totalPrice; // ราคารวม
-  final DateTime? addedAt; // วันที่เพิ่มเข้าตระกร้า
+  final double? unitPrice; // ราคาต่อหน่วย
+  final double? totalPrice; // ราคารวม
+  final DateTime? createdAt; // วันที่เพิ่มเข้าตระกร้า
   final DateTime? updatedAt; // วันที่แก้ไขล่าสุด
 
   const CartItemModel({
     this.id,
     required this.cartId,
-    required this.productId,
+    required this.icCode,
     this.barcode,
     this.unitCode,
     this.quantity = 1,
-    required this.unitPrice,
-    required this.totalPrice,
-    this.addedAt,
+    this.unitPrice,
+    this.totalPrice,
+    this.createdAt,
     this.updatedAt,
   });
 
@@ -32,14 +32,14 @@ class CartItemModel extends Equatable {
     return CartItemModel(
       id: json['id']?.toInt(),
       cartId: json['cart_id']?.toInt() ?? 0,
-      productId: json['product_id']?.toInt() ?? 0,
+      icCode: json['ic_code']?.toString() ?? '',
       barcode: json['barcode']?.toString(),
       unitCode: json['unit_code']?.toString(),
       quantity: json['quantity']?.toInt() ?? 1,
-      unitPrice: json['unit_price']?.toDouble() ?? 0.0,
-      totalPrice: json['total_price']?.toDouble() ?? 0.0,
-      addedAt: json['added_at'] != null
-          ? DateTime.parse(json['added_at'])
+      unitPrice: json['unit_price']?.toDouble(),
+      totalPrice: json['total_price']?.toDouble(),
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'])
           : null,
       updatedAt: json['updated_at'] != null
           ? DateTime.parse(json['updated_at'])
@@ -51,13 +51,13 @@ class CartItemModel extends Equatable {
     return {
       'id': id,
       'cart_id': cartId,
-      'product_id': productId,
+      'ic_code': icCode,
       'barcode': barcode,
       'unit_code': unitCode,
       'quantity': quantity,
       'unit_price': unitPrice,
       'total_price': totalPrice,
-      'added_at': addedAt?.toIso8601String(),
+      'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
     };
   }
@@ -65,35 +65,35 @@ class CartItemModel extends Equatable {
   CartItemModel copyWith({
     int? id,
     int? cartId,
-    int? productId,
+    String? icCode,
     String? barcode,
     String? unitCode,
     int? quantity,
     double? unitPrice,
     double? totalPrice,
-    DateTime? addedAt,
+    DateTime? createdAt,
     DateTime? updatedAt,
   }) {
     return CartItemModel(
       id: id ?? this.id,
       cartId: cartId ?? this.cartId,
-      productId: productId ?? this.productId,
+      icCode: icCode ?? this.icCode,
       barcode: barcode ?? this.barcode,
       unitCode: unitCode ?? this.unitCode,
       quantity: quantity ?? this.quantity,
       unitPrice: unitPrice ?? this.unitPrice,
       totalPrice: totalPrice ?? this.totalPrice,
-      addedAt: addedAt ?? this.addedAt,
+      createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 
-  double get calculatedTotalPrice => quantity * unitPrice;
+  double get calculatedTotalPrice => quantity * (unitPrice ?? 0.0);
 
   CartItemModel updateQuantity(int newQuantity) {
     return copyWith(
       quantity: newQuantity,
-      totalPrice: newQuantity * unitPrice,
+      totalPrice: newQuantity * (unitPrice ?? 0.0),
       updatedAt: DateTime.now(),
     );
   }
@@ -102,13 +102,13 @@ class CartItemModel extends Equatable {
   OrderItemModel toOrderItem(int orderId, String productName) {
     return OrderItemModel(
       orderId: orderId,
-      productId: productId,
+      icCode: icCode,
       productName: productName,
       barcode: barcode,
       unitCode: unitCode,
       quantity: quantity,
-      unitPrice: unitPrice,
-      totalPrice: totalPrice,
+      unitPrice: unitPrice ?? 0.0,
+      totalPrice: totalPrice ?? 0.0,
     );
   }
 
@@ -116,13 +116,13 @@ class CartItemModel extends Equatable {
   List<Object?> get props => [
     id,
     cartId,
-    productId,
+    icCode,
     barcode,
     unitCode,
     quantity,
     unitPrice,
     totalPrice,
-    addedAt,
+    createdAt,
     updatedAt,
   ];
 }

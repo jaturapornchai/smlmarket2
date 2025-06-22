@@ -19,17 +19,13 @@ class CartCubit extends Cubit<CartState> {
       emit(CartLoading());
 
       // ตรวจสอบข้อมูลสินค้า
-      if (product.id == null) {
+      if (product.id == null || product.id!.isEmpty) {
         emit(const CartError(message: 'ข้อมูลสินค้าไม่ถูกต้อง'));
         return;
       }
 
-      final productId = int.tryParse(product.id!) ?? 0;
-      if (productId == 0) {
-        emit(const CartError(message: 'รหัสสินค้าไม่ถูกต้อง'));
-        return;
-      }
-
+      final icCode = product.id!; // ใช้ product.id เป็น icCode โดยตรง
+      
       // ตรวจสอบราคา
       final unitPrice = product.finalPrice ?? product.salePrice ?? product.price ?? 0.0;
       if (unitPrice <= 0) {
@@ -37,12 +33,12 @@ class CartCubit extends Cubit<CartState> {
         return;
       }
 
-      logger.d('Adding to cart: Product ID: $productId, Quantity: $quantity, Price: $unitPrice');
+      logger.d('Adding to cart: IC Code: $icCode, Quantity: $quantity, Price: $unitPrice');
 
       // เพิ่มสินค้าเข้าตระกร้า
       final cartItem = await repository.addProductToCart(
         userId: userId,
-        productId: productId,
+        icCode: icCode,
         barcode: product.barcodes?.isNotEmpty == true ? product.barcodes!.split(',').first.trim() : null,
         unitCode: product.unitStandardCode,
         quantity: quantity,
@@ -70,29 +66,29 @@ class CartCubit extends Cubit<CartState> {
   }
 
   Future<void> checkStock({
-    required int productId,
+    required String icCode,
     required int requestedQuantity,
   }) async {
     try {
       emit(CartLoading());
 
       final hasStock = await repository.checkStockAvailability(
-        productId: productId,
+        icCode: icCode,
         requestedQuantity: requestedQuantity,
       );
 
       // ดึงข้อมูลจำนวนที่มีอยู่
-      final availableQty = await repository.remoteDataSource.checkAvailableQuantity(
-        productId: productId,
+      final availableQty = await repository.getAvailableQuantity(
+        icCode: icCode,
       );
 
       emit(StockCheckSuccess(
         hasStock: hasStock,
         availableQuantity: availableQty,
-        productId: productId,
+        icCode: icCode,
       ));
 
-      logger.d('Stock check: Product $productId, Available: $availableQty, Requested: $requestedQuantity, HasStock: $hasStock');
+      logger.d('Stock check: IC Code $icCode, Available: $availableQty, Requested: $requestedQuantity, HasStock: $hasStock');
     } catch (e) {
       logger.e('Error checking stock: $e');
       emit(const CartError(message: 'ไม่สามารถตรวจสอบสต็อกได้'));

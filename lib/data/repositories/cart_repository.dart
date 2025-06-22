@@ -6,16 +6,17 @@ abstract class CartRepository {
   Future<CartModel> getOrCreateActiveCart({required int userId});
   Future<CartItemModel> addProductToCart({
     required int userId,
-    required int productId,
+    required String icCode,
     required String? barcode,
     required String? unitCode,
     required int quantity,
     required double unitPrice,
   });
   Future<bool> checkStockAvailability({
-    required int productId,
+    required String icCode,
     required int requestedQuantity,
   });
+  Future<int> getAvailableQuantity({required String icCode});
 }
 
 class CartRepositoryImpl implements CartRepository {
@@ -36,12 +37,12 @@ class CartRepositoryImpl implements CartRepository {
 
   @override
   Future<bool> checkStockAvailability({
-    required int productId,
+    required String icCode,
     required int requestedQuantity,
   }) async {
     try {
       final availableQty = await remoteDataSource.checkAvailableQuantity(
-        productId: productId,
+        icCode: icCode,
       );
       
       return availableQty >= requestedQuantity;
@@ -51,9 +52,21 @@ class CartRepositoryImpl implements CartRepository {
   }
 
   @override
+  Future<int> getAvailableQuantity({required String icCode}) async {
+    try {
+      final qty = await remoteDataSource.checkAvailableQuantity(
+        icCode: icCode,
+      );
+      return qty.toInt();
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  @override
   Future<CartItemModel> addProductToCart({
     required int userId,
-    required int productId,
+    required String icCode,
     required String? barcode,
     required String? unitCode,
     required int quantity,
@@ -61,7 +74,7 @@ class CartRepositoryImpl implements CartRepository {
   }) async {
     // 1. ตรวจสอบสต็อก
     final hasStock = await checkStockAvailability(
-      productId: productId,
+      icCode: icCode,
       requestedQuantity: quantity,
     );
 
@@ -75,7 +88,7 @@ class CartRepositoryImpl implements CartRepository {
     // 3. เพิ่มสินค้าเข้าตระกร้า
     return await remoteDataSource.addToCart(
       cartId: cart.id!,
-      productId: productId,
+      icCode: icCode,
       barcode: barcode,
       unitCode: unitCode,
       quantity: quantity,

@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:logger/logger.dart';
 
 import '../../data/models/product_model.dart';
+import '../../data/data_sources/cart_remote_data_source.dart';
+import '../../data/repositories/cart_repository.dart';
+import '../cubit/cart_cubit.dart';
+import '../cubit/cart_state.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   final ProductModel product;
@@ -90,14 +96,73 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     });
   }
 
-  void _addToCart() {
-    // สำหรับตอนนี้แค่แสดง SnackBar และกลับไปหน้าเดิม
-    // ในอนาคตสามารถเพิ่มฟีเจอร์ cart จริงๆ ได้
+  void _addToCart() async {
+    try {
+      // ใช้ CartCubit เพื่อเพิ่มสินค้าเข้าตะกร้า
+      final cartCubit = context.read<CartCubit>();
+      
+      // ตรวจสอบรหัสสินค้า
+      final icCode = widget.product.id ?? '';
+      if (icCode.isEmpty) {
+        _showErrorSnackBar('รหัสสินค้าไม่ถูกต้อง');
+        return;
+      }
 
+      // แสดง loading
+      _showLoadingDialog();
+
+      // ตรวจสอบสต็อก
+      await cartCubit.checkStock(
+        icCode: icCode, 
+        requestedQuantity: quantity,
+      );
+
+      final state = cartCubit.state;
+      Navigator.of(context).pop(); // ปิด loading dialog
+
+      if (state is StockCheckSuccess && state.hasStock) {
+        // สต็อกเพียงพอ เพิ่มเข้าตะกร้า
+        _showLoadingDialog();
+        await cartCubit.addToCart(
+          product: widget.product,
+          quantity: quantity,
+        );
+
+        final addState = cartCubit.state;
+        Navigator.of(context).pop(); // ปิด loading dialog
+
+        if (addState is CartSuccess) {
+          _showSuccessSnackBar('เพิ่ม ${widget.product.name} จำนวน $quantity ลงในตะกร้าแล้ว');
+          Navigator.of(context).pop(); // กลับไปหน้าเดิม
+        } else if (addState is CartError) {
+          _showErrorSnackBar(addState.message);
+        }
+      } else if (state is StockCheckSuccess && !state.hasStock) {
+        _showErrorSnackBar('สินค้าไม่เพียงพอ (มีอยู่ ${state.availableQuantity} ชิ้น)');
+      } else if (state is CartError) {
+        _showErrorSnackBar(state.message);
+      }
+    } catch (e) {
+      Navigator.of(context).pop(); // ปิด loading dialog (ถ้าเปิดอยู่)
+      _showErrorSnackBar('เกิดข้อผิดพลาด: ${e.toString()}');
+    }
+  }
+
+  void _showLoadingDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+  }
+
+  void _showSuccessSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          'เพิ่ม ${widget.product.name} จำนวน $quantity ลงในตะกร้าแล้ว',
+          message,
           style: const TextStyle(fontWeight: FontWeight.w500),
         ),
         backgroundColor: Colors.green[600],
@@ -105,14 +170,32 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         behavior: SnackBarBehavior.floating,
       ),
     );
+  }
 
-    // กลับไปหน้าเดิม
-    Navigator.of(context).pop();
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: const TextStyle(fontWeight: FontWeight.w500),
+        ),
+        backgroundColor: Colors.red[600],
+        duration: const Duration(seconds: 3),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return BlocProvider(
+      create: (context) => CartCubit(
+        repository: CartRepositoryImpl(
+          remoteDataSource: CartRemoteDataSource(),
+        ),
+        logger: Logger(),
+      ),
+      child: Scaffold(
       appBar: AppBar(
         title: Text(
           widget.product.name ?? 'รายละเอียดสินค้า',
@@ -157,8 +240,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           ],
         ),
       ),
-    );
-  }
+    ), // ปิด Scaffold ของ BlocProvider child
+  ); // ปิด BlocProvider
+  } // ปิด build method
 
   Widget _buildProductImage() {
     return Card(

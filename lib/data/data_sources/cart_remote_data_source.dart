@@ -10,13 +10,13 @@ abstract class CartDataSource {
   Future<CartModel> createCart({required int userId});
   Future<CartItemModel> addToCart({
     required int cartId,
-    required int productId,
+    required String icCode,
     required String? barcode,
     required String? unitCode,
     required int quantity,
     required double unitPrice,
   });
-  Future<double> checkAvailableQuantity({required int productId});
+  Future<double> checkAvailableQuantity({required String icCode});
 }
 
 class CartRemoteDataSource implements CartDataSource {
@@ -42,7 +42,7 @@ class CartRemoteDataSource implements CartDataSource {
       ''';
 
       final response = await httpClient.post(
-        Uri.parse('$baseUrl/pgcommand'),
+        Uri.parse('$baseUrl/v1/pgselect'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'query': query}),
       );
@@ -78,7 +78,7 @@ class CartRemoteDataSource implements CartDataSource {
       ''';
 
       final response = await httpClient.post(
-        Uri.parse('$baseUrl/pgcommand'),
+        Uri.parse('$baseUrl/v1/pgcommand'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'query': query}),
       );
@@ -105,39 +105,40 @@ class CartRemoteDataSource implements CartDataSource {
   }
 
   @override
-  Future<double> checkAvailableQuantity({required int productId}) async {
+  Future<double> checkAvailableQuantity({required String icCode}) async {
     try {
       // ตรวจสอบจำนวนสินค้าในตระกร้าและคำสั่งซื้อ
       final query = '''
         WITH product_stock AS (
-          SELECT qty_available 
-          FROM products 
-          WHERE id = $productId
+          SELECT COALESCE(SUM(ib.balance_qty), 0) as total_balance
+          FROM ic_inventory ii
+          LEFT JOIN ic_balance ib ON ii.code = ib.ic_code
+          WHERE ii.code = '$icCode'
         ),
         cart_reserved AS (
           SELECT COALESCE(SUM(ci.quantity), 0) as cart_qty
           FROM cart_items ci
           INNER JOIN carts c ON ci.cart_id = c.id
-          WHERE ci.product_id = $productId 
+          WHERE ci.ic_code = '$icCode' 
           AND c.status = 'active'
         ),
         order_reserved AS (
           SELECT COALESCE(SUM(oi.quantity), 0) as order_qty
           FROM order_items oi
           INNER JOIN orders o ON oi.order_id = o.id
-          WHERE oi.product_id = $productId 
+          WHERE oi.ic_code = '$icCode' 
           AND o.status IN ('pending', 'confirmed', 'processing')
         )
         SELECT 
-          ps.qty_available,
+          ps.total_balance,
           cr.cart_qty,
           or_.order_qty,
-          (ps.qty_available - cr.cart_qty - or_.order_qty) as available_qty
+          (ps.total_balance - cr.cart_qty - or_.order_qty) as available_qty
         FROM product_stock ps, cart_reserved cr, order_reserved or_
       ''';
 
       final response = await httpClient.post(
-        Uri.parse('$baseUrl/pgcommand'),
+        Uri.parse('$baseUrl/v1/pgselect'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'query': query}),
       );
@@ -167,7 +168,7 @@ class CartRemoteDataSource implements CartDataSource {
   @override
   Future<CartItemModel> addToCart({
     required int cartId,
-    required int productId,
+    required String icCode,
     required String? barcode,
     required String? unitCode,
     required int quantity,
@@ -179,9 +180,9 @@ class CartRemoteDataSource implements CartDataSource {
       // ใช้ UPSERT เพื่อเพิ่มหรืออัพเดทสินค้าในตระกร้า
       final query = '''
         WITH upsert AS (
-          INSERT INTO cart_items (cart_id, product_id, barcode, unit_code, quantity, unit_price, total_price)
-          VALUES ($cartId, $productId, ${barcode != null ? "'$barcode'" : 'NULL'}, ${unitCode != null ? "'$unitCode'" : 'NULL'}, $quantity, $unitPrice, $totalPrice)
-          ON CONFLICT (cart_id, product_id)
+          INSERT INTO cart_items (cart_id, ic_code, barcode, unit_code, quantity, unit_price, total_price)
+          VALUES ($cartId, '$icCode', ${barcode != null ? "'$barcode'" : 'NULL'}, ${unitCode != null ? "'$unitCode'" : 'NULL'}, $quantity, $unitPrice, $totalPrice)
+          ON CONFLICT (cart_id, ic_code)
           DO UPDATE SET 
             quantity = cart_items.quantity + $quantity,
             total_price = (cart_items.quantity + $quantity) * cart_items.unit_price,
@@ -195,7 +196,7 @@ class CartRemoteDataSource implements CartDataSource {
       ''';
 
       final response = await httpClient.post(
-        Uri.parse('$baseUrl/pgcommand'),
+        Uri.parse('$baseUrl/v1/pgcommand'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'query': query}),
       );
