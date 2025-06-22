@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../data/models/product_model.dart';
 
 class ProductDetailScreen extends StatefulWidget {
@@ -591,7 +592,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       height: 48,
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(4),
                         border: Border.all(color: Colors.blue[300]!),
                       ),
                       child: TextField(

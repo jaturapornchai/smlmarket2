@@ -1,11 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:logger/logger.dart';
 
-import 'data/data_sources/product_remote_data_source.dart';
-import 'data/repositories/product_repository.dart';
-import 'presentation/cubit/product_search_cubit.dart';
-import 'presentation/screens/product_search_screen.dart';
+import 'presentation/screens/main_navigation_screen.dart';
 
 void main() {
   runApp(const SmlMarketApp());
@@ -16,13 +11,6 @@ class SmlMarketApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Initialize dependencies
-    final logger = Logger();
-    final remoteDataSource = ProductRemoteDataSource(logger: logger);
-    final repository = ProductRepositoryImpl(
-      remoteDataSource: remoteDataSource,
-    );
-
     return MaterialApp(
       title: 'SML Market',
       debugShowCheckedModeBanner: false,
@@ -39,11 +27,7 @@ class SmlMarketApp extends StatelessWidget {
           centerTitle: true,
         ),
       ),
-      home: BlocProvider(
-        create: (context) =>
-            ProductSearchCubit(repository: repository, logger: logger),
-        child: const ProductSearchScreen(),
-      ),
+      home: const MainNavigationScreen(),
     );
   }
 }

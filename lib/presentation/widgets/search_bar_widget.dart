@@ -37,7 +37,7 @@ class _SearchBarWidgetState extends State<SearchBarWidget> {
           Container(
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(30),
+              borderRadius: BorderRadius.circular(4),
               boxShadow: [
                 BoxShadow(
                   color: Colors.grey.withValues(alpha: 0.2),
