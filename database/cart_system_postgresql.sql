@@ -21,7 +21,7 @@ DROP TABLE IF EXISTS carts CASCADE;
 -- 🛒 ตาราง carts (ตระกร้าหลัก)
 CREATE TABLE carts (
     id SERIAL PRIMARY KEY,
-    user_id INTEGER,
+    customer_id INTEGER,
     status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'completed', 'cancelled')),
     total_amount DECIMAL(10,2) DEFAULT 0.00,
     total_items INTEGER DEFAULT 0,
@@ -33,23 +33,23 @@ CREATE TABLE carts (
 CREATE TABLE cart_items (
     id SERIAL PRIMARY KEY,
     cart_id INTEGER NOT NULL REFERENCES carts(id) ON DELETE CASCADE,
-    product_id INTEGER NOT NULL,
+    ic_code VARCHAR(50) NOT NULL, -- รหัสสินค้าจาก ic_inventory
     barcode VARCHAR(255),
     unit_code VARCHAR(50),
     quantity INTEGER NOT NULL DEFAULT 1,
     unit_price DECIMAL(10,2) NOT NULL,
     total_price DECIMAL(10,2) NOT NULL,
-    added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     
-    CONSTRAINT unique_cart_product UNIQUE(cart_id, product_id)
+    CONSTRAINT unique_cart_ic_code UNIQUE(cart_id, ic_code)
 );
 
 -- 📦 ตาราง orders (คำสั่งซื้อ)
 CREATE TABLE orders (
     id SERIAL PRIMARY KEY,
     cart_id INTEGER NOT NULL REFERENCES carts(id),
-    user_id INTEGER NOT NULL,
+    customer_id INTEGER NOT NULL,
     order_number VARCHAR(50) UNIQUE NOT NULL,
     status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled')),
     total_amount DECIMAL(10,2) NOT NULL,
@@ -64,7 +64,7 @@ CREATE TABLE orders (
 CREATE TABLE order_items (
     id SERIAL PRIMARY KEY,
     order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
-    product_id INTEGER NOT NULL,
+    ic_code VARCHAR(50) NOT NULL, -- รหัสสินค้าจาก ic_inventory
     product_name VARCHAR(255) NOT NULL,
     barcode VARCHAR(255),
     unit_code VARCHAR(50),
@@ -78,17 +78,17 @@ CREATE TABLE order_items (
 -- ========================================
 
 -- Indexes สำหรับ carts
-CREATE INDEX idx_carts_user_id ON carts(user_id);
+CREATE INDEX idx_carts_customer_id ON carts(customer_id);
 CREATE INDEX idx_carts_status ON carts(status);
 CREATE INDEX idx_carts_created_at ON carts(created_at);
 
 -- Indexes สำหรับ cart_items
 CREATE INDEX idx_cart_items_cart_id ON cart_items(cart_id);
-CREATE INDEX idx_cart_items_product_id ON cart_items(product_id);
+CREATE INDEX idx_cart_items_ic_code ON cart_items(ic_code);
 CREATE INDEX idx_cart_items_barcode ON cart_items(barcode);
 
 -- Indexes สำหรับ orders
-CREATE INDEX idx_orders_user_id ON orders(user_id);
+CREATE INDEX idx_orders_customer_id ON orders(customer_id);
 CREATE INDEX idx_orders_cart_id ON orders(cart_id);
 CREATE INDEX idx_orders_status ON orders(status);
 CREATE INDEX idx_orders_payment_status ON orders(payment_status);
@@ -97,7 +97,7 @@ CREATE INDEX idx_orders_ordered_at ON orders(ordered_at);
 
 -- Indexes สำหรับ order_items
 CREATE INDEX idx_order_items_order_id ON order_items(order_id);
-CREATE INDEX idx_order_items_product_id ON order_items(product_id);
+CREATE INDEX idx_order_items_ic_code ON order_items(ic_code);
 CREATE INDEX idx_order_items_barcode ON order_items(barcode);
 
 -- ========================================
@@ -176,20 +176,20 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE VIEW v_cart_details AS
 SELECT 
     c.id as cart_id,
-    c.user_id,
+    c.customer_id,
     c.status,
     c.total_amount,
     c.total_items,
     c.created_at,
     c.updated_at,
     ci.id as item_id,
-    ci.product_id,
+    ci.ic_code,
     ci.barcode,
     ci.unit_code,
     ci.quantity,
     ci.unit_price,
     ci.total_price as item_total,
-    ci.added_at
+    ci.created_at as item_created_at
 FROM carts c
 LEFT JOIN cart_items ci ON c.id = ci.cart_id;
 
@@ -198,7 +198,7 @@ CREATE OR REPLACE VIEW v_order_details AS
 SELECT 
     o.id as order_id,
     o.cart_id,
-    o.user_id,
+    o.customer_id,
     o.order_number,
     o.status,
     o.total_amount,
@@ -208,7 +208,7 @@ SELECT
     o.notes,
     o.ordered_at,
     oi.id as item_id,
-    oi.product_id,
+    oi.ic_code,
     oi.product_name,
     oi.barcode,
     oi.unit_code,

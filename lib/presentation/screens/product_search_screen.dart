@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+
+import '../../data/models/product_model.dart';
+import '../cubit/cart_cubit.dart';
+import '../cubit/cart_state.dart';
 import '../cubit/product_search_cubit.dart';
 import '../cubit/product_search_state.dart';
-import '../widgets/search_bar_widget.dart';
 import '../widgets/product_grid.dart';
-import '../../data/models/product_model.dart';
+import '../widgets/search_bar_widget.dart';
+import 'cart_screen.dart';
+import 'login_screen.dart';
 import 'product_detail_screen.dart';
 
 class ProductSearchScreen extends StatefulWidget {
@@ -16,7 +21,15 @@ class ProductSearchScreen extends StatefulWidget {
 
 class _ProductSearchScreenState extends State<ProductSearchScreen> {
   final TextEditingController _searchController = TextEditingController();
-  bool _isAiEnabled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // โหลดข้อมูลตระกร้าเมื่อเริ่มต้น
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<CartCubit>().loadCart(customerId: '1');
+    });
+  }
 
   @override
   void dispose() {
@@ -27,14 +40,12 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
   void _onSearch(String query) {
     context.read<ProductSearchCubit>().searchProducts(
       query: query,
-      aiEnabled: _isAiEnabled,
+      aiEnabled: false, // ปิด AI ไว้ก่อน
     );
   }
 
   void _onAiToggle() {
-    setState(() {
-      _isAiEnabled = !_isAiEnabled;
-    });
+    // ไม่ต้องทำอะไรในขั้นตอนนี้
   }
 
   void _onProductTap(ProductModel product) {
@@ -47,6 +58,63 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
 
   void _onLoadMore() {
     context.read<ProductSearchCubit>().loadMoreProducts();
+  }
+
+  void _onCartTap() async {
+    // นำทางไปยังตระกร้าและรอผลลัพธ์
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (context) => const CartScreen()));
+    // เมื่อกลับมาแล้ว ให้รีเฟรชข้อมูลตระกร้า
+    if (mounted) {
+      context.read<CartCubit>().loadCart(customerId: '1');
+    }
+  }
+
+  void _onLoginTap() {
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (context) => const LoginScreen()));
+  }
+
+  /// สร้าง icon ตระกร้าพร้อมแสดงจำนวนสินค้า
+  Widget _buildCartIcon(int itemCount) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        const Icon(Icons.shopping_cart, size: 24),
+        if (itemCount > 0)
+          Positioned(
+            right: -6,
+            top: -6,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: Colors.red,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.white, width: 2),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.2),
+                    blurRadius: 2,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
+              ),
+              constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
+              child: Text(
+                itemCount > 99 ? '99+' : '$itemCount',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+      ],
+    );
   }
 
   Widget _buildSearchSummary(ProductSearchState state) {
@@ -72,33 +140,6 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
               ),
             ),
           ),
-          if (_isAiEnabled && state is ProductSearchSuccess)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: Colors.purple.shade100,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.psychology,
-                    size: 12,
-                    color: Colors.purple.shade600,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    'AI',
-                    style: TextStyle(
-                      color: Colors.purple.shade600,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
         ],
       ),
     );
@@ -220,6 +261,39 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: const Text(
+          'SML Market',
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue),
+        ),
+        backgroundColor: Colors.white,
+        elevation: 1,
+        surfaceTintColor: Colors.white,
+        actions: [
+          // Cart Button with Badge
+          BlocBuilder<CartCubit, CartState>(
+            builder: (context, cartState) {
+              int totalItemCount = 0;
+              if (cartState is CartLoaded) {
+                totalItemCount = cartState.totalItems;
+              }
+
+              return IconButton(
+                onPressed: _onCartTap,
+                icon: _buildCartIcon(totalItemCount),
+                tooltip: 'ตระกร้าสินค้า',
+              );
+            },
+          ),
+          // Login Button
+          IconButton(
+            onPressed: _onLoginTap,
+            icon: const Icon(Icons.login),
+            tooltip: 'เข้าสู่ระบบ',
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
       body: Column(
         children: [
           // Search Section
@@ -227,7 +301,7 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
             builder: (context, state) {
               return SearchBarWidget(
                 controller: _searchController,
-                isAiEnabled: _isAiEnabled,
+                isAiEnabled: false, // ปิด AI ไว้ก่อน
                 onSearch: _onSearch,
                 onAiToggle: _onAiToggle,
                 isLoading: state is ProductSearchLoading,

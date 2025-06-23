@@ -4,7 +4,7 @@ import 'package:equatable/equatable.dart';
 class OrderItemModel extends Equatable {
   final int? id; // รหัสรายการสินค้าในคำสั่งซื้อ
   final int orderId; // รหัสคำสั่งซื้อ (FK)
-  final int productId; // รหัสสินค้า (FK)
+  final String icCode; // รหัสสินค้า (FK) - ใช้ ic_code แทน product_id
   final String productName; // ชื่อสินค้า (snapshot)
   final String? barcode; // บาร์โค้ดสินค้า (snapshot)
   final String? unitCode; // รหัสหน่วยสินค้า (snapshot)
@@ -15,7 +15,7 @@ class OrderItemModel extends Equatable {
   const OrderItemModel({
     this.id,
     required this.orderId,
-    required this.productId,
+    required this.icCode,
     required this.productName,
     this.barcode,
     this.unitCode,
@@ -28,7 +28,7 @@ class OrderItemModel extends Equatable {
     return OrderItemModel(
       id: json['id']?.toInt(),
       orderId: json['order_id']?.toInt() ?? 0,
-      productId: json['product_id']?.toInt() ?? 0,
+      icCode: json['ic_code']?.toString() ?? '',
       productName: json['product_name']?.toString() ?? '',
       barcode: json['barcode']?.toString(),
       unitCode: json['unit_code']?.toString(),
@@ -42,7 +42,7 @@ class OrderItemModel extends Equatable {
     return {
       'id': id,
       'order_id': orderId,
-      'product_id': productId,
+      'ic_code': icCode,
       'product_name': productName,
       'barcode': barcode,
       'unit_code': unitCode,
@@ -55,7 +55,7 @@ class OrderItemModel extends Equatable {
   OrderItemModel copyWith({
     int? id,
     int? orderId,
-    int? productId,
+    String? icCode,
     String? productName,
     String? barcode,
     String? unitCode,
@@ -66,7 +66,7 @@ class OrderItemModel extends Equatable {
     return OrderItemModel(
       id: id ?? this.id,
       orderId: orderId ?? this.orderId,
-      productId: productId ?? this.productId,
+      icCode: icCode ?? this.icCode,
       productName: productName ?? this.productName,
       barcode: barcode ?? this.barcode,
       unitCode: unitCode ?? this.unitCode,
@@ -82,7 +82,7 @@ class OrderItemModel extends Equatable {
   List<Object?> get props => [
     id,
     orderId,
-    productId,
+    icCode,
     productName,
     barcode,
     unitCode,

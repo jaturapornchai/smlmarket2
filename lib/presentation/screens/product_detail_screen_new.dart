@@ -30,7 +30,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     try {
       final cartCubit = context.read<CartCubit>();
       final icCode = widget.product.id ?? '';
-      
+
       if (icCode.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -222,7 +222,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   }
 
   Widget _buildProductImage() {
-    final imageUrl = widget.product.imgUrl != null &&
+    final imageUrl =
+        widget.product.imgUrl != null &&
             widget.product.imgUrl!.isNotEmpty &&
             widget.product.imgUrl != 'N/A'
         ? widget.product.imgUrl!
@@ -250,19 +251,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             if (loadingProgress == null) return child;
             return Container(
               color: Colors.grey[100],
-              child: const Center(
-                child: CircularProgressIndicator(),
-              ),
+              child: const Center(child: CircularProgressIndicator()),
             );
           },
           errorBuilder: (context, error, stackTrace) {
             return Container(
               color: Colors.grey[100],
-              child: Icon(
-                Icons.inventory,
-                size: 80,
-                color: Colors.grey[400],
-              ),
+              child: Icon(Icons.inventory, size: 80, color: Colors.grey[400]),
             );
           },
         ),
@@ -322,11 +317,16 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
   Widget _buildPriceSection() {
     final finalPrice =
-        widget.product.finalPrice ?? widget.product.salePrice ?? widget.product.price ?? 0.0;
+        widget.product.finalPrice ??
+        widget.product.salePrice ??
+        widget.product.price ??
+        0.0;
     final originalPrice = widget.product.price ?? 0.0;
     final hasDiscount =
-        (widget.product.discountPrice != null && widget.product.discountPrice! > 0) ||
-        (widget.product.discountPercent != null && widget.product.discountPercent! > 0);
+        (widget.product.discountPrice != null &&
+            widget.product.discountPrice! > 0) ||
+        (widget.product.discountPercent != null &&
+            widget.product.discountPercent! > 0);
 
     if (finalPrice <= 0) {
       return Container(
@@ -407,7 +407,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         ],
 
         // Discount Info
-        if (widget.product.discountPercent != null && widget.product.discountPercent! > 0) ...[
+        if (widget.product.discountPercent != null &&
+            widget.product.discountPercent! > 0) ...[
           const SizedBox(height: 8),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -470,10 +471,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 const SizedBox(height: 8),
                 Text(
                   'จำนวน: $quantityInCart ชิ้น',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.green.shade600,
-                  ),
+                  style: TextStyle(fontSize: 16, color: Colors.green.shade600),
                 ),
               ],
             ),
@@ -486,7 +484,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             child: ElevatedButton(
               onPressed: canAddToCart ? _addToCart : null,
               style: ElevatedButton.styleFrom(
-                backgroundColor: canAddToCart ? Colors.green[600] : Colors.grey[400],
+                backgroundColor: canAddToCart
+                    ? Colors.green[600]
+                    : Colors.grey[400],
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(

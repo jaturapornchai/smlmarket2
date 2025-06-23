@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:logger/logger.dart';
 
-import '../../data/data_sources/product_remote_data_source.dart';
-import '../../data/repositories/product_repository.dart';
 import '../cubit/navigation_cubit.dart';
-import '../cubit/product_search_cubit.dart';
 import '../widgets/bottom_nav_bar.dart';
 import 'cart_screen.dart';
 import 'history_screen.dart';
@@ -17,49 +13,34 @@ class MainNavigationScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final logger = Logger();
-    final remoteDataSource = ProductRemoteDataSource(logger: logger);
-    final repository = ProductRepositoryImpl(
-      remoteDataSource: remoteDataSource,
-    );
+    return BlocBuilder<NavigationCubit, int>(
+      builder: (context, index) {
+        Widget currentScreen;
+        switch (index) {
+          case 0:
+            currentScreen = const ProductSearchScreen();
+            break;
+          case 1:
+            currentScreen = const CartScreen();
+            break;
+          case 2:
+            currentScreen = const HistoryScreen();
+            break;
+          case 3:
+            currentScreen = const LoginScreen();
+            break;
+          default:
+            currentScreen = const ProductSearchScreen();
+        }
 
-    return MultiBlocProvider(
-      providers: [
-        BlocProvider(create: (_) => NavigationCubit()),
-        BlocProvider(
-          create: (_) =>
-              ProductSearchCubit(repository: repository, logger: logger),
-        ),
-      ],
-      child: BlocBuilder<NavigationCubit, int>(
-        builder: (context, index) {
-          Widget currentScreen;
-          switch (index) {
-            case 0:
-              currentScreen = const ProductSearchScreen();
-              break;
-            case 1:
-              currentScreen = const CartScreen();
-              break;
-            case 2:
-              currentScreen = const HistoryScreen();
-              break;
-            case 3:
-              currentScreen = const LoginScreen();
-              break;
-            default:
-              currentScreen = const ProductSearchScreen();
-          }
-
-          return Scaffold(
-            body: currentScreen,
-            bottomNavigationBar: BottomNavBar(
-              currentIndex: index,
-              onTap: (i) => context.read<NavigationCubit>().setTab(i),
-            ),
-          );
-        },
-      ),
+        return Scaffold(
+          body: currentScreen,
+          bottomNavigationBar: BottomNavBar(
+            currentIndex: index,
+            onTap: (i) => context.read<NavigationCubit>().setTab(i),
+          ),
+        );
+      },
     );
   }
 }

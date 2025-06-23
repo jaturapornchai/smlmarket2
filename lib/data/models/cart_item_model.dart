@@ -36,8 +36,8 @@ class CartItemModel extends Equatable {
       barcode: json['barcode']?.toString(),
       unitCode: json['unit_code']?.toString(),
       quantity: json['quantity']?.toInt() ?? 1,
-      unitPrice: json['unit_price']?.toDouble(),
-      totalPrice: json['total_price']?.toDouble(),
+      unitPrice: _parseDouble(json['unit_price']),
+      totalPrice: _parseDouble(json['total_price']),
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'])
           : null,
@@ -45,6 +45,21 @@ class CartItemModel extends Equatable {
           ? DateTime.parse(json['updated_at'])
           : null,
     );
+  }
+
+  /// Helper method to safely parse double from various types
+  static double? _parseDouble(dynamic value) {
+    if (value == null) return null;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is String) {
+      try {
+        return double.parse(value);
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
   }
 
   Map<String, dynamic> toJson() {

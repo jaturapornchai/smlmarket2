@@ -22,7 +22,7 @@ enum PaymentStatus {
 class OrderModel extends Equatable {
   final int? id; // รหัสคำสั่งซื้อ
   final int cartId; // รหัสตระกร้า (FK)
-  final int userId; // รหัสผู้ใช้ (FK)
+  final int customerId; // รหัสลูกค้า (FK) - ใช้ customer_id แทน user_id
   final String orderNumber; // หมายเลขคำสั่งซื้อ
   final OrderStatus status; // สถานะคำสั่งซื้อ
   final double totalAmount; // จำนวนเงินรวม
@@ -35,7 +35,7 @@ class OrderModel extends Equatable {
   const OrderModel({
     this.id,
     required this.cartId,
-    required this.userId,
+    required this.customerId,
     required this.orderNumber,
     this.status = OrderStatus.pending,
     required this.totalAmount,
@@ -50,7 +50,7 @@ class OrderModel extends Equatable {
     return OrderModel(
       id: json['id']?.toInt(),
       cartId: json['cart_id']?.toInt() ?? 0,
-      userId: json['user_id']?.toInt() ?? 0,
+      customerId: json['customer_id']?.toInt() ?? 0,
       orderNumber: json['order_number']?.toString() ?? '',
       status: _parseOrderStatus(json['status']),
       totalAmount: json['total_amount']?.toDouble() ?? 0.0,
@@ -68,7 +68,7 @@ class OrderModel extends Equatable {
     return {
       'id': id,
       'cart_id': cartId,
-      'user_id': userId,
+      'customer_id': customerId,
       'order_number': orderNumber,
       'status': status.name,
       'total_amount': totalAmount,
@@ -117,7 +117,7 @@ class OrderModel extends Equatable {
   OrderModel copyWith({
     int? id,
     int? cartId,
-    int? userId,
+    int? customerId,
     String? orderNumber,
     OrderStatus? status,
     double? totalAmount,
@@ -130,7 +130,7 @@ class OrderModel extends Equatable {
     return OrderModel(
       id: id ?? this.id,
       cartId: cartId ?? this.cartId,
-      userId: userId ?? this.userId,
+      customerId: customerId ?? this.customerId,
       orderNumber: orderNumber ?? this.orderNumber,
       status: status ?? this.status,
       totalAmount: totalAmount ?? this.totalAmount,
@@ -146,7 +146,7 @@ class OrderModel extends Equatable {
   List<Object?> get props => [
     id,
     cartId,
-    userId,
+    customerId,
     orderNumber,
     status,
     totalAmount,

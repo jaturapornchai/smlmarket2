@@ -13,7 +13,7 @@ enum CartStatus {
 /// โมเดลตระกร้าสินค้า - เก็บข้อมูลตระกร้าหลักของผู้ใช้
 class CartModel extends Equatable {
   final int? id; // รหัสตระกร้า
-  final int? userId; // รหัสผู้ใช้
+  final int? customerId; // รหัสลูกค้า - ใช้ customer_id แทน user_id
   final CartStatus status; // สถานะตระกร้า
   final double totalAmount; // จำนวนเงินรวม
   final int totalItems; // จำนวนสินค้าทั้งหมด
@@ -22,7 +22,7 @@ class CartModel extends Equatable {
 
   const CartModel({
     this.id,
-    this.userId,
+    this.customerId,
     this.status = CartStatus.active,
     this.totalAmount = 0.0,
     this.totalItems = 0,
@@ -33,9 +33,9 @@ class CartModel extends Equatable {
   factory CartModel.fromJson(Map<String, dynamic> json) {
     return CartModel(
       id: json['id']?.toInt(),
-      userId: json['user_id']?.toInt(),
+      customerId: json['customer_id']?.toInt(),
       status: _parseStatus(json['status']),
-      totalAmount: json['total_amount']?.toDouble() ?? 0.0,
+      totalAmount: _parseDouble(json['total_amount']) ?? 0.0,
       totalItems: json['total_items']?.toInt() ?? 0,
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'])
@@ -49,7 +49,7 @@ class CartModel extends Equatable {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'user_id': userId,
+      'customer_id': customerId,
       'status': status.name,
       'total_amount': totalAmount,
       'total_items': totalItems,
@@ -71,9 +71,17 @@ class CartModel extends Equatable {
     }
   }
 
+  static double? _parseDouble(dynamic value) {
+    if (value == null) return null;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is String) return double.tryParse(value);
+    return null;
+  }
+
   CartModel copyWith({
     int? id,
-    int? userId,
+    int? customerId,
     CartStatus? status,
     double? totalAmount,
     int? totalItems,
@@ -82,7 +90,7 @@ class CartModel extends Equatable {
   }) {
     return CartModel(
       id: id ?? this.id,
-      userId: userId ?? this.userId,
+      customerId: customerId ?? this.customerId,
       status: status ?? this.status,
       totalAmount: totalAmount ?? this.totalAmount,
       totalItems: totalItems ?? this.totalItems,
@@ -100,7 +108,7 @@ class CartModel extends Equatable {
   }) {
     return OrderModel(
       cartId: id ?? 0,
-      userId: userId ?? 0,
+      customerId: customerId ?? 0,
       orderNumber: orderNumber,
       totalAmount: totalAmount,
       shippingAddress: shippingAddress,
@@ -114,7 +122,7 @@ class CartModel extends Equatable {
   CartModel updateTotals({required List<CartItemModel> items}) {
     final newTotalAmount = items.fold<double>(
       0.0,
-      (sum, item) => sum + item.totalPrice,
+      (sum, item) => sum + (item.totalPrice ?? 0.0),
     );
     final newTotalItems = items.fold<int>(
       0,
@@ -131,7 +139,7 @@ class CartModel extends Equatable {
   @override
   List<Object?> get props => [
     id,
-    userId,
+    customerId,
     status,
     totalAmount,
     totalItems,
