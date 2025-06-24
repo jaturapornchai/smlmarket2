@@ -45,7 +45,9 @@ class _CartItemWidgetState extends State<CartItemWidget> {
   void didUpdateWidget(CartItemWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.item.quantity != widget.item.quantity && !_isEditing) {
-      _quantityController.text = NumberFormatter.formatQuantity(widget.item.quantity);
+      _quantityController.text = NumberFormatter.formatQuantity(
+        widget.item.quantity,
+      );
     }
   }
 
@@ -75,21 +77,23 @@ class _CartItemWidgetState extends State<CartItemWidget> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      if (widget.item.barcode != null && widget.item.barcode!.isNotEmpty)
+                      if (widget.item.barcode != null &&
+                          widget.item.barcode!.isNotEmpty)
                         Text(
                           'บาร์โค้ด: ${widget.item.barcode}',
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.grey.shade600,
                           ),
-                        ),
-                      // แสดงยอดคงเหลือ
+                        ), // แสดงยอดที่สั่งเพิ่มได้
                       if (widget.qtyAvailable != null)
                         Text(
-                          'คงเหลือ: ${NumberFormatter.formatQuantity(widget.qtyAvailable!)} ชิ้น',
+                          'ยอดที่สั่งเพิ่มได้: ${NumberFormatter.formatQuantity(widget.qtyAvailable!)} ชิ้น',
                           style: TextStyle(
                             fontSize: 12,
-                            color: widget.qtyAvailable! > 0 ? Colors.green.shade600 : Colors.red.shade600,
+                            color: widget.qtyAvailable! > 0
+                                ? Colors.green.shade600
+                                : Colors.red.shade600,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -120,7 +124,9 @@ class _CartItemWidgetState extends State<CartItemWidget> {
                       style: TextStyle(fontSize: 12, color: Colors.grey),
                     ),
                     Text(
-                      NumberFormatter.formatCurrency(widget.item.unitPrice ?? 0.0),
+                      NumberFormatter.formatCurrency(
+                        widget.item.unitPrice ?? 0.0,
+                      ),
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -142,7 +148,8 @@ class _CartItemWidgetState extends State<CartItemWidget> {
             ),
 
             // หน่วย (ถ้ามี)
-            if (widget.item.unitCode != null && widget.item.unitCode!.isNotEmpty) ...[
+            if (widget.item.unitCode != null &&
+                widget.item.unitCode!.isNotEmpty) ...[
               const SizedBox(height: 8),
               Row(
                 children: [
@@ -207,9 +214,7 @@ class _CartItemWidgetState extends State<CartItemWidget> {
                     : Colors.blue.shade600,
               ),
             ),
-          ),
-
-          // ช่องแก้ไขจำนวน
+          ), // ช่องแก้ไขจำนวน
           InkWell(
             onTap: () => _showQuantityEditDialog(),
             child: Container(
@@ -224,16 +229,22 @@ class _CartItemWidgetState extends State<CartItemWidget> {
               child: Text(
                 NumberFormatter.formatQuantity(widget.item.quantity),
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
-          ),
-
-          // ปุ่มเพิ่ม
+          ), // ปุ่มเพิ่ม
           InkWell(
             onTap: () {
               final newQuantity = widget.item.quantity + 1.0;
-              if (widget.qtyAvailable == null || newQuantity <= widget.qtyAvailable!) {
+              // ⭐ สำหรับรายการในตะกร้า: ยอดสูงสุดที่สั่งได้ = ยอดคงเหลือ + จำนวนในตะกร้าปัจจุบัน
+              final maxAllowedQuantity = widget.qtyAvailable != null
+                  ? widget.qtyAvailable! + widget.item.quantity
+                  : double.infinity;
+
+              if (newQuantity <= maxAllowedQuantity) {
                 widget.onQuantityChanged(newQuantity);
               } else {
                 _showStockLimitDialog();
@@ -246,7 +257,9 @@ class _CartItemWidgetState extends State<CartItemWidget> {
             child: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: _canIncrease() ? Colors.blue.shade50 : Colors.grey.shade100,
+                color: _canIncrease()
+                    ? Colors.blue.shade50
+                    : Colors.grey.shade100,
                 borderRadius: const BorderRadius.only(
                   topRight: Radius.circular(8),
                   bottomRight: Radius.circular(8),
@@ -255,7 +268,9 @@ class _CartItemWidgetState extends State<CartItemWidget> {
               child: Icon(
                 Icons.add,
                 size: 20,
-                color: _canIncrease() ? Colors.blue.shade600 : Colors.grey.shade400,
+                color: _canIncrease()
+                    ? Colors.blue.shade600
+                    : Colors.grey.shade400,
               ),
             ),
           ),
@@ -267,7 +282,9 @@ class _CartItemWidgetState extends State<CartItemWidget> {
   /// ตรวจสอบว่าสามารถเพิ่มจำนวนได้หรือไม่
   bool _canIncrease() {
     if (widget.qtyAvailable == null) return true;
-    return widget.item.quantity < widget.qtyAvailable!;
+    // ⭐ สำหรับรายการในตะกร้า: ยอดสูงสุดที่สั่งได้ = ยอดคงเหลือ + จำนวนในตะกร้าปัจจุบัน
+    final maxAllowedQuantity = widget.qtyAvailable! + widget.item.quantity;
+    return widget.item.quantity < maxAllowedQuantity;
   }
 
   /// สร้างแสดงราคารวม
@@ -295,8 +312,10 @@ class _CartItemWidgetState extends State<CartItemWidget> {
 
   /// แสดง Dialog สำหรับแก้ไขจำนวน
   void _showQuantityEditDialog() {
-    _quantityController.text = NumberFormatter.formatQuantity(widget.item.quantity);
-    
+    _quantityController.text = NumberFormatter.formatQuantity(
+      widget.item.quantity,
+    );
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -313,8 +332,8 @@ class _CartItemWidgetState extends State<CartItemWidget> {
               decoration: InputDecoration(
                 labelText: 'จำนวน',
                 suffixText: 'ชิ้น',
-                helperText: widget.qtyAvailable != null 
-                    ? 'คงเหลือ: ${NumberFormatter.formatQuantity(widget.qtyAvailable!)} ชิ้น'
+                helperText: widget.qtyAvailable != null
+                    ? 'ยอดที่สั่งเพิ่มได้อีก: ${NumberFormatter.formatQuantity(widget.qtyAvailable!)} ชิ้น'
                     : null,
                 border: const OutlineInputBorder(),
               ),
@@ -345,29 +364,66 @@ class _CartItemWidgetState extends State<CartItemWidget> {
   void _saveQuantity() {
     final text = _quantityController.text.trim();
     final newQuantity = double.tryParse(text);
-    
+
     if (newQuantity == null || newQuantity <= 0) {
       _showErrorDialog('กรุณาใส่จำนวนที่ถูกต้อง');
       return;
+    } // ⭐ สำหรับรายการในตะกร้า: ยอดสูงสุดที่สั่งได้ = ยอดคงเหลือ + จำนวนในตะกร้าปัจจุบัน
+    if (widget.qtyAvailable != null) {
+      final maxAllowedQuantity = widget.qtyAvailable! + widget.item.quantity;
+      if (newQuantity > maxAllowedQuantity) {
+        _showErrorDialog(
+          'จำนวนเกินยอดที่สั่งเพิ่มได้อีก (สูงสุด ${NumberFormatter.formatQuantity(maxAllowedQuantity)} ชิ้น)',
+        );
+        return;
+      }
     }
 
-    if (widget.qtyAvailable != null && newQuantity > widget.qtyAvailable!) {
-      _showErrorDialog('จำนวนเกินยอดคงเหลือ (${NumberFormatter.formatQuantity(widget.qtyAvailable!)} ชิ้น)');
-      return;
-    }
-
-    widget.onQuantityChanged(newQuantity);
     Navigator.pop(context);
+    widget.onQuantityChanged(newQuantity);
   }
 
   /// แสดงข้อผิดพลาดเมื่อเกินยอดคงเหลือ
   void _showStockLimitDialog() {
+    final maxAllowedQuantity = widget.qtyAvailable != null
+        ? widget.qtyAvailable! + widget.item.quantity
+        : 0.0;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('ไม่สามารถเพิ่มได้'),
-        content: Text(
-          'สินค้าคงเหลือเพียง ${NumberFormatter.formatQuantity(widget.qtyAvailable!)} ชิ้น',
+        title: Row(
+          children: [
+            Icon(Icons.warning_amber, color: Colors.orange.shade600),
+            const SizedBox(width: 8),
+            const Text('ไม่สามารถเพิ่มได้'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'สินค้าคงเหลือที่สามารถสั่งเพิ่มได้อีก:',
+              style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
+            ),
+            Text(
+              '${NumberFormatter.formatQuantity(widget.qtyAvailable ?? 0)} ชิ้น',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.red.shade600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'จำนวนสูงสุดที่สั่งได้ทั้งหมด (รวมในตะกร้า):',
+              style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
+            ),
+            Text(
+              '${NumberFormatter.formatQuantity(maxAllowedQuantity)} ชิ้น',
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
+          ],
         ),
         actions: [
           TextButton(

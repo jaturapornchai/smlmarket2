@@ -21,7 +21,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   @override
   void initState() {
     super.initState();
-    // ไม่ต้องโหลดตระกร้าทันที รอให้กดเพิ่มลงตระกร้าก่อน
+    // ไม่ต้องโหลดยอดคงเหลือเริ่มต้น ใช้ข้อมูลจาก product
   }
 
   void _addToCart() async {
@@ -35,6 +35,21 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             content: Text('รหัสสินค้าไม่ถูกต้อง'),
             backgroundColor: Colors.red,
             duration: Duration(seconds: 2),
+          ),
+        );
+        return;
+      } // ⭐ ตรวจสอบยอดคงเหลือจาก product
+      double availableQty = widget.product.qtyAvailable ?? 0;
+
+      // ตรวจสอบว่าจำนวนที่จะเพิ่มไม่เกินยอดคงเหลือ
+      if (quantity > availableQty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'สินค้าไม่เพียงพอ (มีเหลือ ${availableQty.toInt()} ชิ้น)',
+            ),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 2),
           ),
         );
         return;
@@ -88,8 +103,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             ),
           );
 
-          context.read<CartCubit>().loadCart(customerId: '1');
-
+          // กลับไปหน้าค้นหาทันที
           Future.delayed(const Duration(milliseconds: 500), () {
             if (mounted && context.mounted) {
               Navigator.of(context).pop();
@@ -165,9 +179,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 12),
-
-                      // Stock Status
+                      const SizedBox(height: 12), // Stock Status
                       _buildStockStatus(),
                       const SizedBox(height: 16),
 

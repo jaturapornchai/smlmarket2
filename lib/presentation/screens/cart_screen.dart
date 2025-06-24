@@ -44,7 +44,8 @@ class _CartScreenState extends State<CartScreen> {
       backgroundColor: Colors.grey[50],
       appBar: _buildAppBar(),
       body: BlocConsumer<CartCubit, CartState>(
-        listener: _handleStateListener,        buildWhen: (previous, current) {
+        listener: _handleStateListener,
+        buildWhen: (previous, current) {
           // Rebuild เฉพาะเมื่อ state เปลี่ยนจริงๆ
           if (previous.runtimeType != current.runtimeType) return true;
           if (current is CartLoaded && previous is CartLoaded) {
@@ -54,9 +55,12 @@ class _CartScreenState extends State<CartScreen> {
             if (previous.totalItems != current.totalItems) return true;
 
             // ⭐ ตรวจสอบการเปลี่ยนแปลงของ stockQuantities
-            if (previous.stockQuantities.length != current.stockQuantities.length) return true;
+            if (previous.stockQuantities.length !=
+                current.stockQuantities.length)
+              return true;
             for (final icCode in current.stockQuantities.keys) {
-              if (previous.stockQuantities[icCode] != current.stockQuantities[icCode]) {
+              if (previous.stockQuantities[icCode] !=
+                  current.stockQuantities[icCode]) {
                 return true;
               }
             }
@@ -220,7 +224,8 @@ class _CartScreenState extends State<CartScreen> {
         Expanded(
           child: ListView.builder(
             padding: const EdgeInsets.all(16),
-            itemCount: state.items.length,            itemBuilder: (context, index) {
+            itemCount: state.items.length,
+            itemBuilder: (context, index) {
               final item = state.items[index];
               final qtyAvailable = state.stockQuantities[item.icCode];
               return CartItemWidget(
@@ -238,7 +243,7 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
-  /// สร้างปุ่มชำระเงิน
+  /// สร้างปุ่มเปิดใบขอยืนยันราคาและขอยืนยันจำนวน
   Widget _buildCheckoutButton(CartLoaded state) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -275,7 +280,7 @@ class _CartScreenState extends State<CartScreen> {
           ),
           const SizedBox(height: 16),
 
-          // ปุ่มชำระเงิน
+          // ปุ่มเปิดใบขอยืนยันราคาและขอยืนยันจำนวน
           SizedBox(
             width: double.infinity,
             height: 50,
@@ -295,7 +300,7 @@ class _CartScreenState extends State<CartScreen> {
                   Icon(Icons.shopping_cart_checkout, size: 24),
                   SizedBox(width: 8),
                   Text(
-                    'ดำเนินการชำระเงิน',
+                    'ดำเนินการเปิดใบขอยืนยันราคาและขอยืนยันจำนวน',
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                 ],
@@ -374,15 +379,17 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
-  /// ดำเนินการชำระเงิน
+  /// ดำเนินการเปิดใบขอยืนยันราคาและขอยืนยันจำนวน
   void _proceedToCheckout(CartLoaded state) {
-    // TODO: Navigate to checkout screen
-    _logger.d('Proceed to checkout with ${state.items.length} items');
+    // TODO: Navigate to quotation confirmation screen
+    _logger.d(
+      'Opening price and quantity confirmation request with ${state.items.length} items',
+    );
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('ดำเนินการชำระเงิน'),
+        title: const Text('ดำเนินการเปิดใบขอยืนยันราคาและขอยืนยันจำนวน'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -393,7 +400,7 @@ class _CartScreenState extends State<CartScreen> {
               'ยอดรวม: ${NumberFormatter.formatCurrency(state.totalAmount)}',
             ),
             const SizedBox(height: 16),
-            const Text('ต้องการสร้างคำสั่งซื้อหรือไม่?'),
+            const Text('ต้องการเปิดใบขอยืนยันราคาและขอยืนยันจำนวนหรือไม่?'),
           ],
         ),
         actions: [
@@ -404,13 +411,13 @@ class _CartScreenState extends State<CartScreen> {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              _createOrder(state);
+              _navigateToQuotationCreation(state);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.green.shade600,
               foregroundColor: Colors.white,
             ),
-            child: const Text('สร้างคำสั่งซื้อ'),
+            child: const Text('เปิดใบขอยืนยัน'),
           ),
         ],
       ),
@@ -421,6 +428,22 @@ class _CartScreenState extends State<CartScreen> {
   void _createOrder(CartLoaded state) {
     context.read<CartCubit>().createOrder();
     _logger.d('Create order for cart with ${state.items.length} items');
+  }
+
+  /// นำทางไปสร้างใบขอยืนยันราคา
+  void _navigateToQuotationCreation(CartLoaded state) {
+    // สร้างใบขอยืนยันราคาจากข้อมูลตะกร้า
+    // TODO: นำทางไปหน้าสร้างใบขอยืนยัน หรือสร้างทันทีแล้วไปหน้ารายการ
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('สร้างใบขอยืนยันราคาเรียบร้อย กำลังนำทางไปหน้ารายการ...'),
+      ),
+    );
+
+    // Simulate navigation to quotation list
+    Future.delayed(const Duration(seconds: 1), () {
+      // TODO: Navigator.pushNamed(context, '/quotations');
+    });
   }
 
   /// แสดง Success SnackBar

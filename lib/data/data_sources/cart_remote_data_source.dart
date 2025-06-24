@@ -126,8 +126,14 @@ class CartRemoteDataSource implements CartDataSource {
     required double unitPrice,
   }) async {
     try {
-      // Refresh ยอดคงเหลือจากฐานข้อมูลหลักก่อน
-      await refreshInventoryBalance(icCode: icCode);
+      // ลองทำ Refresh ยอดคงเหลือจากฐานข้อมูลหลักก่อน (optional fallback)
+      await refreshInventoryBalance(icCode: icCode).catchError((e) {
+        // ไม่ต้องทำอะไร - ใช้ real-time calculation แทน
+        logger.d(
+          '🔄 Using real-time calculation instead of refresh for $icCode',
+        );
+        return false;
+      });
 
       // ตรวจสอบยอดพร้อมสั่งก่อนเพิ่มสินค้า
       final availableQty = await checkAvailableQuantity(icCode: icCode);
@@ -361,15 +367,16 @@ class CartRemoteDataSource implements CartDataSource {
         return;
       }
 
-      // ลองทำ Refresh ยอดคงเหลือจากฐานข้อมูลหลักก่อน (optional)
-      try {
-        await refreshInventoryBalance(icCode: icCode);
-      } catch (e) {
-        // ถ้า refresh ไม่ได้ ให้ข้ามไป ไม่ต้องหยุดการทำงาน
-        logger.w('⚠️ Could not refresh inventory for $icCode, continuing...');
-      }
+      // ลองทำ Refresh ยอดคงเหลือจากฐานข้อมูลหลักก่อน (optional fallback)
+      await refreshInventoryBalance(icCode: icCode).catchError((e) {
+        // ไม่ต้องทำอะไร - ใช้ real-time calculation แทน
+        logger.d(
+          '🔄 Using real-time calculation instead of refresh for $icCode',
+        );
+        return false;
+      });
 
-      // ตรวจสอบยอดพร้อมสั่งแบบ real-time (ไม่รวมจำนวนของลูกค้าปัจจุบัน)
+      // ตรวจสอบยอดพร้อมสั่งแบบ real-time(ไม่รวมจำนวนของลูกค้าปัจจุบัน)
       final availableQty = await getAvailableQuantityRealtime(
         icCode: icCode,
         currentCustomerId: customerId,
@@ -791,16 +798,17 @@ class CartRemoteDataSource implements CartDataSource {
           '🔄 [DATA_SOURCE] Refresh inventory balance for $icCode: ${response.data}',
         );
       }
-
       if (response.data['success'] == true) {
         logger.d('✅ Inventory balance refreshed for $icCode');
         return true;
       } else {
-        logger.w('⚠️ Failed to refresh inventory balance for $icCode');
+        // Silent fallback - ไม่แสดงข้อความเตือน
+        logger.d('🔄 Refresh failed for $icCode, using real-time calculation');
         return false;
       }
     } catch (e) {
-      logger.e('⛔ Error refreshing inventory balance for $icCode', error: e);
+      // Silent fallback - ไม่แสดงข้อความเตือน เพราะเป็น scenario ที่คาดหวังได้
+      logger.d('🔄 Using real-time calculation for $icCode (fallback)');
       return false;
     }
   }
