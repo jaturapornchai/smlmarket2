@@ -14,7 +14,7 @@ abstract class CartDataSource {
     required String icCode,
     required String? barcode,
     required String? unitCode,
-    required double quantity,
+    required int quantity,
     required double unitPrice,
   });
   Future<double> checkAvailableQuantity({required String icCode});
@@ -22,7 +22,7 @@ abstract class CartDataSource {
   Future<void> updateCartItemQuantity({
     required int customerId,
     required String icCode,
-    required double quantity,
+    required int quantity,
   });
   Future<void> removeFromCart({
     required int customerId,
@@ -89,11 +89,11 @@ class CartRemoteDataSource implements CartDataSource {
       if (kDebugMode) {
         logger.d('🛒 [DATA_SOURCE] Create cart response: ${response.data}');
       }
-      if (response.data['success'] == true) {
-        // ข้อมูลที่ return มาจาก pgcommand จะอยู่ใน result
-        // แต่เนื่องจากไม่มี RETURNING data ให้สร้าง cart object ชั่วคราว
-        // แล้วไปดึงข้อมูลจริงจากฐานข้อมูลอีกครั้ง
-        return await getActiveCart(customerId: customerId);
+
+      if (response.data['success'] == true &&
+          response.data['data'] != null &&
+          response.data['data'].isNotEmpty) {
+        return CartModel.fromJson(response.data['data'][0]);
       } else {
         throw Exception('Failed to create cart');
       }
@@ -112,7 +112,7 @@ class CartRemoteDataSource implements CartDataSource {
     required String icCode,
     required String? barcode,
     required String? unitCode,
-    required double quantity,
+    required int quantity,
     required double unitPrice,
   }) async {
     try {
@@ -136,23 +136,14 @@ class CartRemoteDataSource implements CartDataSource {
       if (kDebugMode) {
         logger.d('🛒 [DATA_SOURCE] Add to cart response: ${response.data}');
       }
-      if (response.data['success'] == true) {
+
+      if (response.data['success'] == true &&
+          response.data['data'] != null &&
+          response.data['data'].isNotEmpty) {
         // อัปเดตยอดรวมในตระกร้า
         await _updateCartTotals(cartId);
 
-        // ส่งกลับ CartItemModel ที่สร้างจากข้อมูลที่เรามี
-        return CartItemModel(
-          id: null, // จะได้จาก database ภายหลัง
-          cartId: cartId,
-          icCode: icCode,
-          barcode: barcode,
-          unitCode: unitCode,
-          quantity: quantity,
-          unitPrice: unitPrice,
-          totalPrice: totalPrice,
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-        );
+        return CartItemModel.fromJson(response.data['data'][0]);
       } else {
         throw Exception('Failed to add item to cart');
       }
@@ -168,14 +159,27 @@ class CartRemoteDataSource implements CartDataSource {
   @override
   Future<double> checkAvailableQuantity({required String icCode}) async {
     try {
-      // NOTE: เนื่องจากข้อมูล qty_available มีอยู่ใน ProductModel แล้ว
-      // เราจึงไม่ควรเรียก API อีกครั้ง แต่ควรส่ง qty_available มาจาก UI layer
-      // สำหรับตอนนี้เราจะ return ค่าเยอะๆ เพื่อไม่ให้ block การทำงาน
-      logger.d('⚠️ Using fallback stock check for $icCode');
-      return 999999.0; // ค่าเยอะๆ เพื่อไม่ให้เกิด stock shortage
+      // ตรวจสอบจาก ic_inventory table
+      final query =
+          """
+        SELECT qty_available 
+        FROM ic_inventory 
+        WHERE ic_code = '$icCode'
+        LIMIT 1
+      """;
+
+      final response = await dio.post('/pgselect', data: {'query': query});
+
+      if (response.data['success'] == true &&
+          response.data['data'] != null &&
+          response.data['data'].isNotEmpty) {
+        return (response.data['data'][0]['qty_available'] ?? 0.0).toDouble();
+      }
+
+      return 0.0;
     } catch (e) {
       logger.e('⛔ Error checking available quantity', error: e);
-      return 999999.0; // ค่าเยอะๆ เพื่อไม่ให้เกิด stock shortage
+      return 0.0;
     }
   }
 
@@ -218,7 +222,7 @@ class CartRemoteDataSource implements CartDataSource {
   Future<void> updateCartItemQuantity({
     required int customerId,
     required String icCode,
-    required double quantity,
+    required int quantity,
   }) async {
     try {
       if (quantity <= 0) {

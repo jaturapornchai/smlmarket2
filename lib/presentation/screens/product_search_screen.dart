@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../data/models/product_model.dart';
+import '../../utils/number_formatter.dart';
 import '../cubit/cart_cubit.dart';
 import '../cubit/cart_state.dart';
 import '../cubit/product_search_cubit.dart';
@@ -21,13 +22,14 @@ class ProductSearchScreen extends StatefulWidget {
 
 class _ProductSearchScreenState extends State<ProductSearchScreen> {
   final TextEditingController _searchController = TextEditingController();
-
   @override
   void initState() {
     super.initState();
-    // โหลดข้อมูลตระกร้าเมื่อเริ่มต้น
+    // โหลดข้อมูลตระกร้าครั้งเดียวเมื่อเริ่มต้น
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<CartCubit>().loadCart(customerId: '1');
+      if (mounted) {
+        context.read<CartCubit>().loadCart(customerId: '1');
+      }
     });
   }
 
@@ -61,14 +63,10 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
   }
 
   void _onCartTap() async {
-    // นำทางไปยังตระกร้าและรอผลลัพธ์
-    await Navigator.of(
+    // นำทางไปยังตระกร้า (ไม่ต้องโหลดใหม่เพราะ CartScreen จะโหลดเอง)
+    Navigator.of(
       context,
     ).push(MaterialPageRoute(builder: (context) => const CartScreen()));
-    // เมื่อกลับมาแล้ว ให้รีเฟรชข้อมูลตระกร้า
-    if (mounted) {
-      context.read<CartCubit>().loadCart(customerId: '1');
-    }
   }
 
   void _onLoginTap() {
@@ -78,7 +76,7 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
   }
 
   /// สร้าง icon ตระกร้าพร้อมแสดงจำนวนสินค้า
-  Widget _buildCartIcon(int itemCount) {
+  Widget _buildCartIcon(double itemCount) {
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -103,7 +101,9 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
               ),
               constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
               child: Text(
-                itemCount > 99 ? '99+' : '$itemCount',
+                itemCount > 99
+                    ? '99+'
+                    : NumberFormatter.formatQuantity(itemCount),
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 10,
@@ -273,7 +273,7 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
           // Cart Button with Badge
           BlocBuilder<CartCubit, CartState>(
             builder: (context, cartState) {
-              int totalItemCount = 0;
+              double totalItemCount = 0.0;
               if (cartState is CartLoaded) {
                 totalItemCount = cartState.totalItems;
               }
@@ -322,40 +322,6 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
           ),
         ],
       ),
-    );
-  }
-}
-
-class SearchResponseModel {
-  final bool success;
-  final String message;
-  final List<ProductModel> products;
-  final int totalCount;
-  final String query;
-  final double durationMs;
-
-  SearchResponseModel({
-    required this.success,
-    required this.message,
-    required this.products,
-    required this.totalCount,
-    required this.query,
-    required this.durationMs,
-  });
-
-  factory SearchResponseModel.fromJson(Map<String, dynamic> json) {
-    final data = json['data'] as Map<String, dynamic>? ?? {};
-    final productList = data['data'] as List<dynamic>? ?? [];
-
-    return SearchResponseModel(
-      success: json['success'] as bool? ?? false,
-      message: json['message'] as String? ?? '',
-      products: productList
-          .map((item) => ProductModel.fromJson(item as Map<String, dynamic>))
-          .toList(),
-      totalCount: data['total_count'] as int? ?? productList.length,
-      query: data['query'] as String? ?? '',
-      durationMs: data['duration_ms'] as double? ?? 0.0,
     );
   }
 }

@@ -16,7 +16,7 @@ class CartModel extends Equatable {
   final int? customerId; // รหัสลูกค้า - ใช้ customer_id แทน user_id
   final CartStatus status; // สถานะตระกร้า
   final double totalAmount; // จำนวนเงินรวม
-  final int totalItems; // จำนวนสินค้าทั้งหมด
+  final double totalItems; // จำนวนสินค้าทั้งหมด
   final DateTime? createdAt; // วันที่สร้าง
   final DateTime? updatedAt; // วันที่แก้ไขล่าสุด
 
@@ -25,7 +25,7 @@ class CartModel extends Equatable {
     this.customerId,
     this.status = CartStatus.active,
     this.totalAmount = 0.0,
-    this.totalItems = 0,
+    this.totalItems = 0.0,
     this.createdAt,
     this.updatedAt,
   });
@@ -36,7 +36,7 @@ class CartModel extends Equatable {
       customerId: json['customer_id']?.toInt(),
       status: _parseStatus(json['status']),
       totalAmount: _parseDouble(json['total_amount']) ?? 0.0,
-      totalItems: json['total_items']?.toInt() ?? 0,
+      totalItems: json['total_items']?.toDouble() ?? 0.0,
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'])
           : null,
@@ -84,7 +84,7 @@ class CartModel extends Equatable {
     int? customerId,
     CartStatus? status,
     double? totalAmount,
-    int? totalItems,
+    double? totalItems,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -93,7 +93,7 @@ class CartModel extends Equatable {
       customerId: customerId ?? this.customerId,
       status: status ?? this.status,
       totalAmount: totalAmount ?? this.totalAmount,
-      totalItems: totalItems ?? this.totalItems,
+      totalItems: totalItems?.toDouble() ?? this.totalItems,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -124,8 +124,8 @@ class CartModel extends Equatable {
       0.0,
       (sum, item) => sum + (item.totalPrice ?? 0.0),
     );
-    final newTotalItems = items.fold<int>(
-      0,
+    final newTotalItems = items.fold<double>(
+      0.0,
       (sum, item) => sum + item.quantity,
     );
 

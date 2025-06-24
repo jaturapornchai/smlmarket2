@@ -138,7 +138,7 @@ class _ProductGridState extends State<ProductGrid> {
       elevation: 3,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Container(
-        height: 300, // ความสูงเดียวกับ ProductCard
+        height: 400, // ความสูงเดียวกับ ProductCard
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           color: Colors.grey.shade50,

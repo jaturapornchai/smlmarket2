@@ -10,12 +10,20 @@ abstract class CartRepository {
     required String icCode,
     required String? barcode,
     required String? unitCode,
-    required int quantity,
+    required double quantity,
+    required double unitPrice,
+  });
+  Future<CartItemModel> addProductToCartDirectly({
+    required int customerId,
+    required String icCode,
+    required String? barcode,
+    required String? unitCode,
+    required double quantity,
     required double unitPrice,
   });
   Future<bool> checkStockAvailability({
     required String icCode,
-    required int requestedQuantity,
+    required double requestedQuantity,
   });
   Future<int> getAvailableQuantity({required String icCode});
 
@@ -24,7 +32,7 @@ abstract class CartRepository {
   Future<void> updateCartItemQuantity({
     required int customerId,
     required String icCode,
-    required int quantity,
+    required double quantity,
   });
   Future<void> removeFromCart({
     required int customerId,
@@ -53,7 +61,7 @@ class CartRepositoryImpl implements CartRepository {
   @override
   Future<bool> checkStockAvailability({
     required String icCode,
-    required int requestedQuantity,
+    required double requestedQuantity,
   }) async {
     try {
       final availableQty = await remoteDataSource.checkAvailableQuantity(
@@ -82,7 +90,7 @@ class CartRepositoryImpl implements CartRepository {
     required String icCode,
     required String? barcode,
     required String? unitCode,
-    required int quantity,
+    required double quantity,
     required double unitPrice,
   }) async {
     // 1. ตรวจสอบสต็อก
@@ -123,7 +131,7 @@ class CartRepositoryImpl implements CartRepository {
   Future<void> updateCartItemQuantity({
     required int customerId,
     required String icCode,
-    required int quantity,
+    required double quantity,
   }) async {
     return await remoteDataSource.updateCartItemQuantity(
       customerId: customerId,
@@ -151,5 +159,29 @@ class CartRepositoryImpl implements CartRepository {
   @override
   Future<OrderModel> createOrder({required int customerId, int? cartId}) async {
     return await remoteDataSource.createOrder(customerId: customerId);
+  }
+
+  @override
+  Future<CartItemModel> addProductToCartDirectly({
+    required int customerId,
+    required String icCode,
+    required String? barcode,
+    required String? unitCode,
+    required double quantity,
+    required double unitPrice,
+  }) async {
+    // ไม่ตรวจสอบสต็อก เพราะทำไปแล้วใน UI layer
+    // 1. หาหรือสร้างตระกร้า
+    final cart = await getOrCreateActiveCart(customerId: customerId);
+
+    // 2. เพิ่มสินค้าเข้าตระกร้าโดยตรง
+    return await remoteDataSource.addToCart(
+      cartId: cart.id!,
+      icCode: icCode,
+      barcode: barcode,
+      unitCode: unitCode,
+      quantity: quantity,
+      unitPrice: unitPrice,
+    );
   }
 }

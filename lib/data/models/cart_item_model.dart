@@ -9,7 +9,7 @@ class CartItemModel extends Equatable {
   final String icCode; // รหัสสินค้า (FK) - ใช้ ic_code แทน product_id
   final String? barcode; // บาร์โค้ดสินค้า
   final String? unitCode; // รหัสหน่วยสินค้า
-  final int quantity; // จำนวนสินค้า
+  final double quantity; // จำนวนสินค้า
   final double? unitPrice; // ราคาต่อหน่วย
   final double? totalPrice; // ราคารวม
   final DateTime? createdAt; // วันที่เพิ่มเข้าตระกร้า
@@ -21,7 +21,7 @@ class CartItemModel extends Equatable {
     required this.icCode,
     this.barcode,
     this.unitCode,
-    this.quantity = 1,
+    this.quantity = 1.0,
     this.unitPrice,
     this.totalPrice,
     this.createdAt,
@@ -35,7 +35,7 @@ class CartItemModel extends Equatable {
       icCode: json['ic_code']?.toString() ?? '',
       barcode: json['barcode']?.toString(),
       unitCode: json['unit_code']?.toString(),
-      quantity: json['quantity']?.toInt() ?? 1,
+      quantity: _parseDouble(json['quantity']) ?? 1.0,
       unitPrice: _parseDouble(json['unit_price']),
       totalPrice: _parseDouble(json['total_price']),
       createdAt: json['created_at'] != null
@@ -95,7 +95,7 @@ class CartItemModel extends Equatable {
       icCode: icCode ?? this.icCode,
       barcode: barcode ?? this.barcode,
       unitCode: unitCode ?? this.unitCode,
-      quantity: quantity ?? this.quantity,
+      quantity: quantity?.toDouble() ?? this.quantity,
       unitPrice: unitPrice ?? this.unitPrice,
       totalPrice: totalPrice ?? this.totalPrice,
       createdAt: createdAt ?? this.createdAt,

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../../utils/number_formatter.dart';
+
 /// 📊 Widget แสดงสรุปข้อมูลตระกร้า
 class CartSummaryWidget extends StatelessWidget {
-  final int totalItems;
+  final double totalItems;
   final double totalAmount;
 
   const CartSummaryWidget({
@@ -59,7 +61,7 @@ class CartSummaryWidget extends StatelessWidget {
               _buildSummaryItem(
                 icon: Icons.inventory_2_outlined,
                 label: 'จำนวนสินค้า',
-                value: '$totalItems ชิ้น',
+                value: '${NumberFormatter.formatQuantity(totalItems)} ชิ้น',
               ),
 
               // เส้นแบ่ง
@@ -73,7 +75,7 @@ class CartSummaryWidget extends StatelessWidget {
               _buildSummaryItem(
                 icon: Icons.payments_outlined,
                 label: 'ยอดรวมทั้งหมด',
-                value: '฿${totalAmount.toStringAsFixed(2)}',
+                value: NumberFormatter.formatCurrency(totalAmount),
                 isHighlight: true,
               ),
             ],

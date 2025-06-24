@@ -16,7 +16,7 @@ class CartLoading extends CartState {}
 class CartLoaded extends CartState {
   final List<CartItemModel> items;
   final double totalAmount;
-  final int totalItems;
+  final double totalItems;
   final int? cartId;
 
   const CartLoaded({

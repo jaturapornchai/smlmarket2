@@ -1,6 +1,5 @@
-import 'dart:convert';
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 import 'package:logger/logger.dart';
 import '../models/search_response_model.dart';
 
@@ -14,16 +13,10 @@ abstract class ProductDataSource {
 }
 
 class ProductRemoteDataSource implements ProductDataSource {
-  final http.Client httpClient;
+  final Dio dio;
   final Logger logger;
-  //static const String baseUrl = (kDebugMode) ? 'http://localhost:8008' : 'https://smlgoapi.dedepos.com';
-  static const String baseUrl = (kDebugMode)
-      ? 'https://smlgoapi.dedepos.com'
-      : 'https://smlgoapi.dedepos.com';
 
-  ProductRemoteDataSource({http.Client? httpClient, Logger? logger})
-    : httpClient = httpClient ?? http.Client(),
-      logger = logger ?? Logger();
+  ProductRemoteDataSource({required this.dio, required this.logger});
   @override
   Future<SearchResponseModel> searchProducts({
     required String query,
@@ -41,30 +34,24 @@ class ProductRemoteDataSource implements ProductDataSource {
         );
       }
 
-      final uri = Uri.parse('$baseUrl/v1/search');
-      final body = json.encode({
+      final data = {
         'query': query,
         'ai': aiEnabled ? 1 : 0,
         'limit': limit,
         'offset': offset,
-      });
+      };
 
-      final response = await httpClient.post(
-        uri,
-        headers: {'Content-Type': 'application/json'},
-        body: body,
-      );
+      final response = await dio.post('/search', data: data);
 
       if (kDebugMode) {
         logger.d('API Response Status: ${response.statusCode}');
-        logger.d('API Response Body: ${response.body}');
+        logger.d('API Response Data: ${response.data}');
         print('📡 API Response Status: ${response.statusCode}');
-        print('📦 API Response Body: ${response.body}');
+        print('📦 API Response Data: ${response.data}');
       }
 
       if (response.statusCode == 200) {
-        final Map<String, dynamic> jsonData = json.decode(response.body);
-        final searchResponse = SearchResponseModel.fromJson(jsonData);
+        final searchResponse = SearchResponseModel.fromJson(response.data);
 
         if (kDebugMode) {
           logger.i(

@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:logger/logger.dart';
 
 import '../../data/models/cart_item_model.dart';
+import '../../utils/number_formatter.dart';
 import '../cubit/cart_cubit.dart';
 import '../cubit/cart_state.dart';
 import '../widgets/cart_item_widget.dart';
@@ -255,7 +256,7 @@ class _CartScreenState extends State<CartScreen> {
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               Text(
-                '฿${state.totalAmount.toStringAsFixed(2)}',
+                NumberFormatter.formatCurrency(state.totalAmount),
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -299,8 +300,8 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   /// อัพเดทจำนวนสินค้า
-  void _updateQuantity(CartItemModel item, int newQuantity) {
-    if (newQuantity <= 0) {
+  void _updateQuantity(CartItemModel item, double newQuantity) {
+    if (newQuantity <= 0.0) {
       _removeItem(item);
       return;
     }
@@ -380,7 +381,9 @@ class _CartScreenState extends State<CartScreen> {
           children: [
             Text('จำนวนสินค้า: ${state.totalItems} ชิ้น'),
             const SizedBox(height: 8),
-            Text('ยอดรวม: ฿${state.totalAmount.toStringAsFixed(2)}'),
+            Text(
+              'ยอดรวม: ${NumberFormatter.formatCurrency(state.totalAmount)}',
+            ),
             const SizedBox(height: 16),
             const Text('ต้องการสร้างคำสั่งซื้อหรือไม่?'),
           ],

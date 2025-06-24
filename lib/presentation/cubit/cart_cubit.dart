@@ -1,8 +1,10 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:logger/logger.dart';
 
+import '../../data/models/cart_item_model.dart';
 import '../../data/models/product_model.dart';
 import '../../data/repositories/cart_repository.dart';
+import '../../utils/number_formatter.dart';
 import 'cart_state.dart';
 
 class CartCubit extends Cubit<CartState> {
@@ -10,13 +12,15 @@ class CartCubit extends Cubit<CartState> {
   final Logger logger;
   String? _currentCustomerId;
   String? _currentCartId;
+  bool _isLoading = false;
+  DateTime? _lastLoadTime;
 
   CartCubit({required this.repository, required this.logger})
     : super(CartInitial());
 
   Future<void> addToCart({
     required ProductModel product,
-    required int quantity,
+    required double quantity,
     int userId = 1, // ตัวอย่าง userId
   }) async {
     try {
@@ -27,8 +31,18 @@ class CartCubit extends Cubit<CartState> {
         emit(const CartError(message: 'ข้อมูลสินค้าไม่ถูกต้อง'));
         return;
       }
-
       final icCode = product.id!; // ใช้ product.id เป็น icCode โดยตรง
+
+      // ตรวจสอบสต็อกจาก product object โดยตรง
+      final availableQty = product.qtyAvailable ?? 0.0;
+      if (availableQty < quantity) {
+        emit(
+          CartError(
+            message: 'สินค้าไม่เพียงพอ (มีเหลือ ${availableQty.toInt()} ชิ้น)',
+          ),
+        );
+        return;
+      }
 
       // ตรวจสอบราคา
       final unitPrice =
@@ -37,13 +51,12 @@ class CartCubit extends Cubit<CartState> {
         emit(const CartError(message: 'ราคาสินค้าไม่ถูกต้อง'));
         return;
       }
-
       logger.d(
-        'Adding to cart: IC Code: $icCode, Quantity: $quantity, Price: $unitPrice',
+        'Adding to cart: IC Code: $icCode, Quantity: $quantity, Price: $unitPrice, Available: $availableQty',
       );
 
-      // เพิ่มสินค้าเข้าตระกร้า
-      final cartItem = await repository.addProductToCart(
+      // เพิ่มสินค้าเข้าตระกร้าโดยไม่ต้องตรวจสอบสต็อกอีกครั้ง
+      final cartItem = await repository.addProductToCartDirectly(
         customerId: userId,
         icCode: icCode,
         barcode: product.barcodes?.isNotEmpty == true
@@ -78,7 +91,7 @@ class CartCubit extends Cubit<CartState> {
 
   Future<void> checkStock({
     required String icCode,
-    required int requestedQuantity,
+    required double requestedQuantity,
   }) async {
     try {
       emit(CartLoading());
@@ -112,10 +125,27 @@ class CartCubit extends Cubit<CartState> {
 
   Future<void> loadCart({String? customerId}) async {
     try {
+      final customer = customerId ?? _currentCustomerId ?? '1';
+
+      // ป้องกันการโหลดซ้ำถ้าเพิ่งโหลดไปไม่เกิน 5 วินาที
+      if (_isLoading) {
+        logger.d('🚫 [CUBIT] Already loading cart, skipping...');
+        return;
+      }
+
+      if (_lastLoadTime != null &&
+          DateTime.now().difference(_lastLoadTime!).inSeconds < 5 &&
+          customer == _currentCustomerId &&
+          state is CartLoaded) {
+        logger.d('🚫 [CUBIT] Cart loaded recently, skipping...');
+        return;
+      }
+
+      _isLoading = true;
       emit(CartLoading());
 
-      final customer = customerId ?? _currentCustomerId ?? '1';
       _currentCustomerId = customer;
+      _lastLoadTime = DateTime.now();
 
       logger.i('🛒 [CUBIT] Loading cart for customer: $customer');
 
@@ -126,7 +156,7 @@ class CartCubit extends Cubit<CartState> {
 
       // คำนวณยอดรวม
       double totalAmount = 0.0;
-      int totalItems = 0;
+      double totalItems = 0.0;
       for (var item in items) {
         totalAmount += (item.unitPrice ?? 0.0) * item.quantity;
         totalItems += item.quantity;
@@ -138,9 +168,8 @@ class CartCubit extends Cubit<CartState> {
       }
 
       logger.i(
-        '✅ [CUBIT] Cart loaded successfully: ${items.length} items, Total: \$${totalAmount.toStringAsFixed(2)}',
+        '✅ [CUBIT] Cart loaded successfully: ${items.length} items, Total: ${NumberFormatter.formatCurrency(totalAmount)}',
       );
-
       emit(
         CartLoaded(
           items: items,
@@ -152,16 +181,58 @@ class CartCubit extends Cubit<CartState> {
     } catch (e) {
       logger.e('❌ [CUBIT] Error loading cart: $e');
       emit(const CartError(message: 'ไม่สามารถโหลดตระกร้าได้'));
+    } finally {
+      _isLoading = false;
     }
   }
 
   Future<void> updateCartItemQuantity({
     required String icCode,
-    required int newQuantity,
+    required double newQuantity,
   }) async {
     try {
-      emit(CartLoading());
+      // อัปเดต state ทันทีเพื่อไม่ให้กระพริบ
+      final currentState = state;
+      if (currentState is CartLoaded) {
+        final updatedItems = currentState.items.map((item) {
+          if (item.icCode == icCode) {
+            final updatedItem = CartItemModel(
+              id: item.id,
+              cartId: item.cartId,
+              icCode: item.icCode,
+              barcode: item.barcode,
+              unitCode: item.unitCode,
+              quantity: newQuantity,
+              unitPrice: item.unitPrice,
+              totalPrice: (item.unitPrice ?? 0.0) * newQuantity,
+              createdAt: item.createdAt,
+              updatedAt: DateTime.now(),
+            );
+            return updatedItem;
+          }
+          return item;
+        }).toList();
 
+        // คำนวณยอดรวมใหม่
+        double totalAmount = 0.0;
+        double totalItems = 0.0;
+        for (var item in updatedItems) {
+          totalAmount += (item.unitPrice ?? 0.0) * item.quantity;
+          totalItems += item.quantity;
+        }
+
+        // อัปเดต state ทันที
+        emit(
+          CartLoaded(
+            items: updatedItems,
+            totalAmount: totalAmount,
+            totalItems: totalItems,
+            cartId: currentState.cartId,
+          ),
+        );
+      }
+
+      // อัปเดตในฐานข้อมูลใน background
       await repository.updateCartItemQuantity(
         icCode: icCode,
         quantity: newQuantity,
@@ -169,11 +240,10 @@ class CartCubit extends Cubit<CartState> {
       );
 
       logger.d('✅ [CUBIT] Updated quantity for $icCode: $newQuantity');
-
-      // Reload cart to get updated data
-      await loadCart(customerId: _currentCustomerId);
     } catch (e) {
       logger.e('❌ [CUBIT] Error updating quantity: $e');
+      // ถ้าเกิดข้อผิดพลาด โหลดข้อมูลใหม่
+      await loadCart(customerId: _currentCustomerId);
       emit(const CartError(message: 'ไม่สามารถอัพเดทจำนวนสินค้าได้'));
     }
   }
@@ -211,7 +281,7 @@ class CartCubit extends Cubit<CartState> {
         const CartLoaded(
           items: [],
           totalAmount: 0.0,
-          totalItems: 0,
+          totalItems: 0.0,
           cartId: null,
         ),
       );
@@ -255,7 +325,7 @@ class CartCubit extends Cubit<CartState> {
   }
 
   /// ดึงจำนวนสินค้าในตะกร้า
-  int getProductQuantityInCart(String icCode) {
+  double getProductQuantityInCart(String icCode) {
     final currentState = state;
     if (currentState is CartLoaded) {
       try {
@@ -264,10 +334,10 @@ class CartCubit extends Cubit<CartState> {
         );
         return item.quantity;
       } catch (e) {
-        return 0;
+        return 0.0;
       }
     }
-    return 0;
+    return 0.0;
   }
 
   void setCustomerId(String customerId) {

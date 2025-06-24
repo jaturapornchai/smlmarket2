@@ -8,7 +8,7 @@ class OrderItemModel extends Equatable {
   final String productName; // ชื่อสินค้า (snapshot)
   final String? barcode; // บาร์โค้ดสินค้า (snapshot)
   final String? unitCode; // รหัสหน่วยสินค้า (snapshot)
-  final int quantity; // จำนวนสินค้า
+  final double quantity; // จำนวนสินค้า
   final double unitPrice; // ราคาต่อหน่วย (snapshot)
   final double totalPrice; // ราคารวม
 
@@ -32,7 +32,7 @@ class OrderItemModel extends Equatable {
       productName: json['product_name']?.toString() ?? '',
       barcode: json['barcode']?.toString(),
       unitCode: json['unit_code']?.toString(),
-      quantity: json['quantity']?.toInt() ?? 1,
+      quantity: json['quantity']?.toDouble() ?? 1.0,
       unitPrice: json['unit_price']?.toDouble() ?? 0.0,
       totalPrice: json['total_price']?.toDouble() ?? 0.0,
     );
@@ -59,7 +59,7 @@ class OrderItemModel extends Equatable {
     String? productName,
     String? barcode,
     String? unitCode,
-    int? quantity,
+    double? quantity,
     double? unitPrice,
     double? totalPrice,
   }) {
@@ -70,7 +70,7 @@ class OrderItemModel extends Equatable {
       productName: productName ?? this.productName,
       barcode: barcode ?? this.barcode,
       unitCode: unitCode ?? this.unitCode,
-      quantity: quantity ?? this.quantity,
+      quantity: quantity?.toDouble() ?? this.quantity,
       unitPrice: unitPrice ?? this.unitPrice,
       totalPrice: totalPrice ?? this.totalPrice,
     );

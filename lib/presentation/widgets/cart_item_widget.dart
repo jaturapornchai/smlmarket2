@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../../data/models/cart_item_model.dart';
+import '../../utils/number_formatter.dart';
 
 /// 🛍️ Widget แสดงรายการสินค้าในตระกร้า
 class CartItemWidget extends StatelessWidget {
   final CartItemModel item;
-  final Function(int) onQuantityChanged;
+  final Function(double) onQuantityChanged;
   final VoidCallback onRemove;
 
   const CartItemWidget({
@@ -103,7 +104,7 @@ class CartItemWidget extends StatelessWidget {
                 style: TextStyle(fontSize: 14, color: Colors.grey),
               ),
               Text(
-                '฿${item.unitPrice?.toStringAsFixed(2) ?? '0.00'}',
+                NumberFormatter.formatCurrency(item.unitPrice ?? 0.0),
                 style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
@@ -148,8 +149,8 @@ class CartItemWidget extends StatelessWidget {
           // ปุ่มลด
           InkWell(
             onTap: () {
-              if (item.quantity > 1) {
-                onQuantityChanged(item.quantity - 1);
+              if (item.quantity > 1.0) {
+                onQuantityChanged(item.quantity - 1.0);
               }
             },
             borderRadius: const BorderRadius.only(
@@ -159,7 +160,7 @@ class CartItemWidget extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: item.quantity <= 1
+                color: item.quantity <= 1.0
                     ? Colors.grey.shade100
                     : Colors.blue.shade50,
                 borderRadius: const BorderRadius.only(
@@ -170,7 +171,7 @@ class CartItemWidget extends StatelessWidget {
               child: Icon(
                 Icons.remove,
                 size: 20,
-                color: item.quantity <= 1
+                color: item.quantity <= 1.0
                     ? Colors.grey.shade400
                     : Colors.blue.shade600,
               ),
@@ -187,14 +188,14 @@ class CartItemWidget extends StatelessWidget {
               ),
             ),
             child: Text(
-              '${item.quantity}',
+              NumberFormatter.formatQuantity(item.quantity),
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
           ),
 
           // ปุ่มเพิ่ม
           InkWell(
-            onTap: () => onQuantityChanged(item.quantity + 1),
+            onTap: () => onQuantityChanged(item.quantity + 1.0),
             borderRadius: const BorderRadius.only(
               topRight: Radius.circular(8),
               bottomRight: Radius.circular(8),
@@ -228,7 +229,7 @@ class CartItemWidget extends StatelessWidget {
           style: TextStyle(fontSize: 12, color: Colors.grey),
         ),
         Text(
-          '฿${totalPrice.toStringAsFixed(2)}',
+          NumberFormatter.formatCurrency(totalPrice),
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,

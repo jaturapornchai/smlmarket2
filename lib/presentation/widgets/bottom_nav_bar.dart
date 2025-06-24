@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../utils/number_formatter.dart';
 import '../cubit/cart_cubit.dart';
 import '../cubit/cart_state.dart';
 
@@ -19,7 +20,7 @@ class BottomNavBar extends StatelessWidget {
     return BlocBuilder<CartCubit, CartState>(
       builder: (context, cartState) {
         // คำนวณจำนวนรวมของสินค้าในตระกร้า
-        int totalItemCount = 0;
+        double totalItemCount = 0.0;
         if (cartState is CartLoaded) {
           totalItemCount = cartState.totalItems;
         }
@@ -52,7 +53,7 @@ class BottomNavBar extends StatelessWidget {
   }
 
   /// สร้าง icon ตระกร้าพร้อมแสดงจำนวนสินค้า
-  Widget _buildCartIcon(int itemCount) {
+  Widget _buildCartIcon(double itemCount) {
     return Stack(
       children: [
         const Icon(Icons.shopping_cart),
@@ -68,7 +69,9 @@ class BottomNavBar extends StatelessWidget {
               ),
               constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
               child: Text(
-                itemCount > 99 ? '99+' : '$itemCount',
+                itemCount > 99
+                    ? '99+'
+                    : NumberFormatter.formatQuantity(itemCount),
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 10,

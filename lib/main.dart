@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:logger/logger.dart';
 
-import 'data/data_sources/cart_remote_data_source.dart';
-import 'data/data_sources/product_remote_data_source.dart';
-import 'data/repositories/cart_repository.dart';
-import 'data/repositories/product_repository.dart';
 import 'presentation/cubit/cart_cubit.dart';
 import 'presentation/cubit/product_search_cubit.dart';
 import 'presentation/screens/product_search_screen.dart';
+import 'utils/service_locator.dart' as di;
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await di.init();
   runApp(const SmlMarketApp());
 }
 
@@ -19,34 +17,10 @@ class SmlMarketApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final logger = Logger();
-    final remoteDataSource = ProductRemoteDataSource(logger: logger);
-    final repository = ProductRepositoryImpl(
-      remoteDataSource: remoteDataSource,
-    );
-
-    final cartRemoteDataSource = CartRemoteDataSource(logger: logger);
-    final cartRepository = CartRepositoryImpl(
-      remoteDataSource: cartRemoteDataSource,
-    );
-
     return MultiBlocProvider(
       providers: [
-        BlocProvider(
-          create: (_) =>
-              ProductSearchCubit(repository: repository, logger: logger),
-        ),
-        BlocProvider(
-          create: (_) {
-            final cartCubit = CartCubit(
-              repository: cartRepository,
-              logger: logger,
-            );
-            // โหลดข้อมูลตระกร้าทันทีเมื่อเริ่มต้นแอป (ใช้ customer_id = 1 เป็นตัวอย่าง)
-            cartCubit.loadCart(customerId: '1');
-            return cartCubit;
-          },
-        ),
+        BlocProvider(create: (_) => di.sl<ProductSearchCubit>()),
+        BlocProvider(create: (_) => di.sl<CartCubit>()),
       ],
       child: MaterialApp(
         title: 'SML Market',
