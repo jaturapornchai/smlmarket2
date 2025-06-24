@@ -27,6 +27,9 @@ abstract class CartRepository {
   });
   Future<int> getAvailableQuantity({required String icCode});
 
+  // เพิ่ม method ใหม่สำหรับดึงข้อมูลยอดคงเหลือหลายสินค้า
+  Future<Map<String, double>> getStockQuantities({required List<String> icCodes});
+
   // เพิ่มเมธอดใหม่สำหรับการจัดการตระกร้า
   Future<List<CartItemModel>> getCartItems({required int customerId});
   Future<void> updateCartItemQuantity({
@@ -183,5 +186,19 @@ class CartRepositoryImpl implements CartRepository {
       quantity: quantity,
       unitPrice: unitPrice,
     );
+  }
+
+  @override
+  Future<Map<String, double>> getStockQuantities({required List<String> icCodes}) async {
+    try {
+      return await remoteDataSource.getStockQuantities(icCodes: icCodes);
+    } catch (e) {
+      // ในกรณี error ให้ return ข้อมูลเป็น 0 ทั้งหมด
+      final Map<String, double> fallbackMap = {};
+      for (final icCode in icCodes) {
+        fallbackMap[icCode] = 0.0;
+      }
+      return fallbackMap;
+    }
   }
 }

@@ -35,7 +35,7 @@ This guide provides standards and rules for developing Flutter applications with
 8. Search for solutions on Google, Stack Overflow, Discord, GitHub when needed / ค้นหาข้อมูลจาก Google, Stack Overflow, Discord, GitHub เมื่อจำเป็น
 9. Format numbers with comma separator for amounts and quantities / ใส่ comma คั่นหลักพันสำหรับจำนวนเงินและปริมาณ
 10. Display whole numbers without .00 decimal / แสดงจำนวนเต็มโดยไม่ต้องมี .00
-11. Prevent GitHub Copilot from editing files in the .vscode folder / ห้ามให้ GitHub Copilot แก้ไขไฟล์ในโฟลเดอร์ .vscode
+11. **Prevent GitHub Copilot from editing files in the .vscode folder** / ห้ามให้ GitHub Copilot แก้ไขไฟล์ในโฟลเดอร์ .vscode
 
 ### Prohibited Practices / สิ่งที่ห้ามทำ
 
@@ -217,3 +217,13 @@ Features / ฟังก์ชัน:
 5. Use real data, no mocking / ใช้ข้อมูลจริง ไม่ mock data
 6. Keep code concise, separate files by responsibility / โค้ดสั้นกระชับ แยกไฟล์ตามหน้าที่
 7. Use Material Design and Responsive Design / ใช้ Material Design และ Responsive Design
+
+### File Protection Rules / กฎการป้องกันไฟล์
+
+11. **Prevent GitHub Copilot from editing files in the .vscode folder** / ห้ามให้ GitHub Copilot แก้ไขไฟล์ในโฟลเดอร์ .vscode
+12. **Do not modify existing working files without explicit permission** / ห้ามแก้ไขไฟล์ที่ทำงานได้แล้วโดยไม่ได้รับอนุญาตชัดเจน
+13. **Create new files instead of modifying existing ones when adding features** / สร้างไฟล์ใหม่แทนการแก้ไขไฟล์เดิมเมื่อเพิ่มฟีเจอร์
+14. **Ask before making major structural changes** / ขออนุญาตก่อนทำการเปลี่ยนแปลงโครงสร้างหลัก
+15. **Backup important files before modification** / สำรองไฟล์สำคัญก่อนการแก้ไข
+16. **Test thoroughly before suggesting file replacements** / ทดสอบอย่างละเอียดก่อนแนะนำการเปลี่ยนไฟล์
+17. **Preserve existing functionality when updating** / รักษาฟังก์ชันเดิมไว้เมื่อทำการอัปเดต

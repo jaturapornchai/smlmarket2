@@ -18,16 +18,18 @@ class CartLoaded extends CartState {
   final double totalAmount;
   final double totalItems;
   final int? cartId;
+  final Map<String, double> stockQuantities; // เพิ่มข้อมูลยอดคงเหลือ
 
   const CartLoaded({
     required this.items,
     required this.totalAmount,
     required this.totalItems,
     this.cartId,
+    this.stockQuantities = const {},
   });
 
   @override
-  List<Object?> get props => [items, totalAmount, totalItems, cartId];
+  List<Object?> get props => [items, totalAmount, totalItems, cartId, stockQuantities];
 }
 
 class CartSuccess extends CartState {

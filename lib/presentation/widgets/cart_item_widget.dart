@@ -1,20 +1,53 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../data/models/cart_item_model.dart';
 import '../../utils/number_formatter.dart';
 
 /// 🛍️ Widget แสดงรายการสินค้าในตระกร้า
-class CartItemWidget extends StatelessWidget {
+class CartItemWidget extends StatefulWidget {
   final CartItemModel item;
   final Function(double) onQuantityChanged;
   final VoidCallback onRemove;
+  final double? qtyAvailable; // ยอดคงเหลือ
 
   const CartItemWidget({
     super.key,
     required this.item,
     required this.onQuantityChanged,
     required this.onRemove,
+    this.qtyAvailable,
   });
+
+  @override
+  State<CartItemWidget> createState() => _CartItemWidgetState();
+}
+
+class _CartItemWidgetState extends State<CartItemWidget> {
+  late TextEditingController _quantityController;
+  bool _isEditing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _quantityController = TextEditingController(
+      text: NumberFormatter.formatQuantity(widget.item.quantity),
+    );
+  }
+
+  @override
+  void dispose() {
+    _quantityController.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(CartItemWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.item.quantity != widget.item.quantity && !_isEditing) {
+      _quantityController.text = NumberFormatter.formatQuantity(widget.item.quantity);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,15 +69,15 @@ class CartItemWidget extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        item.icCode,
+                        widget.item.icCode,
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      if (item.barcode != null && item.barcode!.isNotEmpty)
+                      if (widget.item.barcode != null && widget.item.barcode!.isNotEmpty)
                         Text(
-                          'บาร์โค้ด: ${item.barcode}',
+                          'บาร์โค้ด: ${widget.item.barcode}',
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.grey.shade600,
@@ -54,7 +87,7 @@ class CartItemWidget extends StatelessWidget {
                   ),
                 ),
                 IconButton(
-                  onPressed: onRemove,
+                  onPressed: widget.onRemove,
                   icon: Icon(Icons.delete_outline, color: Colors.red.shade400),
                   tooltip: 'ลบสินค้า',
                 ),
@@ -104,7 +137,7 @@ class CartItemWidget extends StatelessWidget {
                 style: TextStyle(fontSize: 14, color: Colors.grey),
               ),
               Text(
-                NumberFormatter.formatCurrency(item.unitPrice ?? 0.0),
+                NumberFormatter.formatCurrency(widget.item.unitPrice ?? 0.0),
                 style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
@@ -112,7 +145,7 @@ class CartItemWidget extends StatelessWidget {
               ),
             ],
           ),
-          if (item.unitCode != null && item.unitCode!.isNotEmpty) ...[
+          if (widget.item.unitCode != null && widget.item.unitCode!.isNotEmpty) ...[
             const SizedBox(height: 4),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -122,7 +155,7 @@ class CartItemWidget extends StatelessWidget {
                   style: TextStyle(fontSize: 14, color: Colors.grey),
                 ),
                 Text(
-                  item.unitCode!,
+                  widget.item.unitCode!,
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
@@ -149,8 +182,8 @@ class CartItemWidget extends StatelessWidget {
           // ปุ่มลด
           InkWell(
             onTap: () {
-              if (item.quantity > 1.0) {
-                onQuantityChanged(item.quantity - 1.0);
+              if (widget.item.quantity > 1.0) {
+                widget.onQuantityChanged(widget.item.quantity - 1.0);
               }
             },
             borderRadius: const BorderRadius.only(
@@ -160,7 +193,7 @@ class CartItemWidget extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: item.quantity <= 1.0
+                color: widget.item.quantity <= 1.0
                     ? Colors.grey.shade100
                     : Colors.blue.shade50,
                 borderRadius: const BorderRadius.only(
@@ -171,7 +204,7 @@ class CartItemWidget extends StatelessWidget {
               child: Icon(
                 Icons.remove,
                 size: 20,
-                color: item.quantity <= 1.0
+                color: widget.item.quantity <= 1.0
                     ? Colors.grey.shade400
                     : Colors.blue.shade600,
               ),
@@ -188,14 +221,14 @@ class CartItemWidget extends StatelessWidget {
               ),
             ),
             child: Text(
-              NumberFormatter.formatQuantity(item.quantity),
+              NumberFormatter.formatQuantity(widget.item.quantity),
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
           ),
 
           // ปุ่มเพิ่ม
           InkWell(
-            onTap: () => onQuantityChanged(item.quantity + 1.0),
+            onTap: () => widget.onQuantityChanged(widget.item.quantity + 1.0),
             borderRadius: const BorderRadius.only(
               topRight: Radius.circular(8),
               bottomRight: Radius.circular(8),
@@ -219,7 +252,7 @@ class CartItemWidget extends StatelessWidget {
 
   /// สร้างแสดงราคารวม
   Widget _buildTotalPrice() {
-    final totalPrice = item.totalPrice ?? 0.0;
+    final totalPrice = widget.item.totalPrice ?? 0.0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,

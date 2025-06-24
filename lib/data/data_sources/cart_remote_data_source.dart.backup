@@ -126,9 +126,6 @@ class CartRemoteDataSource implements CartDataSource {
     required double unitPrice,
   }) async {
     try {
-      // Refresh ยอดคงเหลือจากฐานข้อมูลหลักก่อน
-      await refreshInventoryBalance(icCode: icCode);
-
       // ตรวจสอบยอดพร้อมสั่งก่อนเพิ่มสินค้า
       final availableQty = await checkAvailableQuantity(icCode: icCode);
 
@@ -161,10 +158,6 @@ class CartRemoteDataSource implements CartDataSource {
       if (response.data['success'] == true) {
         // อัปเดตยอดรวมในตระกร้า
         await _updateCartTotals(cartId);
-
-        // Log ยอดพร้อมสั่งใหม่หลังจากเพิ่มในตะกร้า
-        final newAvailableQty = await checkAvailableQuantity(icCode: icCode);
-        logger.d('📊 Updated available quantity for $icCode: $newAvailableQty');
 
         // ส่งกลับ CartItemModel ที่สร้างจากข้อมูลที่เรามี
         return CartItemModel(
@@ -213,14 +206,14 @@ class CartRemoteDataSource implements CartDataSource {
         logger.d(
           '📦 [DATA_SOURCE] Check available quantity response: ${response.data}',
         );
-      }
-      if (response.data['success'] == true &&
+      }      if (response.data['success'] == true &&
           response.data['data'] != null &&
           response.data['data'].isNotEmpty) {
+        
         // แปลง available_qty อย่างปลอดภัย ไม่ว่าจะเป็น String หรือ number
         final dynamic rawQty = response.data['data'][0]['available_qty'];
         final double availableQty;
-
+        
         if (rawQty is String) {
           availableQty = double.tryParse(rawQty) ?? 0.0;
         } else if (rawQty is num) {
@@ -228,7 +221,7 @@ class CartRemoteDataSource implements CartDataSource {
         } else {
           availableQty = 0.0;
         }
-
+        
         logger.d('📦 Available quantity for $icCode: $availableQty');
         return availableQty;
       }
@@ -361,14 +354,6 @@ class CartRemoteDataSource implements CartDataSource {
         return;
       }
 
-      // ลองทำ Refresh ยอดคงเหลือจากฐานข้อมูลหลักก่อน (optional)
-      try {
-        await refreshInventoryBalance(icCode: icCode);
-      } catch (e) {
-        // ถ้า refresh ไม่ได้ ให้ข้ามไป ไม่ต้องหยุดการทำงาน
-        logger.w('⚠️ Could not refresh inventory for $icCode, continuing...');
-      }
-
       // ตรวจสอบยอดพร้อมสั่งแบบ real-time (ไม่รวมจำนวนของลูกค้าปัจจุบัน)
       final availableQty = await getAvailableQuantityRealtime(
         icCode: icCode,
@@ -401,13 +386,6 @@ class CartRemoteDataSource implements CartDataSource {
       // อัปเดตยอดรวมในตระกร้า
       final cart = await getActiveCart(customerId: customerId);
       await _updateCartTotals(cart.id!);
-
-      // Log ยอดพร้อมสั่งใหม่หลังจากอัปเดตในตะกร้า
-      final newAvailableQty = await getAvailableQuantityRealtime(
-        icCode: icCode,
-        currentCustomerId: customerId,
-      );
-      logger.d('📊 Updated available quantity for $icCode: $newAvailableQty');
     } catch (e) {
       logger.e('⛔ Error updating cart item quantity', error: e);
       if (kDebugMode) {
@@ -442,15 +420,6 @@ class CartRemoteDataSource implements CartDataSource {
       // อัปเดตยอดรวมในตระกร้า
       final cart = await getActiveCart(customerId: customerId);
       await _updateCartTotals(cart.id!);
-
-      // Log ยอดพร้อมสั่งใหม่หลังจากลบจากตะกร้า
-      final newAvailableQty = await getAvailableQuantityRealtime(
-        icCode: icCode,
-        currentCustomerId: customerId,
-      );
-      logger.d(
-        '📊 Updated available quantity for $icCode after removal: $newAvailableQty',
-      );
     } catch (e) {
       logger.e('⛔ Error removing from cart', error: e);
       if (kDebugMode) {
@@ -463,10 +432,6 @@ class CartRemoteDataSource implements CartDataSource {
   @override
   Future<void> clearCart({required int customerId}) async {
     try {
-      // ดึงรายการสินค้าก่อนลบเพื่อ refresh inventory
-      final cartItems = await getCartItems(customerId: customerId);
-      final icCodes = cartItems.map((item) => item.icCode).toList();
-
       final query =
           """
         DELETE FROM cart_items 
@@ -483,21 +448,7 @@ class CartRemoteDataSource implements CartDataSource {
 
       // อัปเดตยอดรวมในตระกร้า
       final cart = await getActiveCart(customerId: customerId);
-      await _updateCartTotals(
-        cart.id!,
-      ); // Refresh ยอดคงเหลือของสินค้าทั้งหมดที่เคยอยู่ในตะกร้า
-      if (icCodes.isNotEmpty) {
-        try {
-          await refreshMultipleInventoryBalances(icCodes: icCodes);
-          logger.d(
-            '📊 Refreshed inventory balances for ${icCodes.length} items after cart clear',
-          );
-        } catch (e) {
-          logger.w(
-            '⚠️ Could not refresh inventory balances after cart clear, continuing...',
-          );
-        }
-      }
+      await _updateCartTotals(cart.id!);
     } catch (e) {
       logger.e('⛔ Error clearing cart', error: e);
       if (kDebugMode) {
@@ -515,29 +466,6 @@ class CartRemoteDataSource implements CartDataSource {
 
       if (cartItems.isEmpty) {
         throw Exception('Cart is empty');
-      } // Refresh ยอดคงเหลือของสินค้าทั้งหมดก่อนสร้าง order
-      final icCodes = cartItems.map((item) => item.icCode).toList();
-      try {
-        await refreshMultipleInventoryBalances(icCodes: icCodes);
-        logger.d('🔄 Refreshed inventory balances before creating order');
-      } catch (e) {
-        logger.w(
-          '⚠️ Could not refresh inventory balances before creating order, continuing...',
-        );
-      }
-
-      // ตรวจสอบยอดพร้อมสั่งสำหรับสินค้าทั้งหมดก่อนสร้าง order
-      for (var item in cartItems) {
-        final availableQty = await getAvailableQuantityRealtime(
-          icCode: item.icCode,
-          currentCustomerId: customerId,
-        );
-
-        if (item.quantity > availableQty) {
-          throw Exception(
-            'ไม่สามารถสร้างออเดอร์ได้ สินค้า ${item.icCode} มียอดพร้อมสั่งไม่เพียงพอ (ต้องการ: ${item.quantity}, พร้อมสั่ง: $availableQty)',
-          );
-        }
       }
 
       // สร้างหมายเลขออเดอร์
@@ -660,14 +588,14 @@ class CartRemoteDataSource implements CartDataSource {
         logger.d(
           '📦 [DATA_SOURCE] Real-time available quantity response: ${response.data}',
         );
-      }
-      if (response.data['success'] == true &&
+      }      if (response.data['success'] == true &&
           response.data['data'] != null &&
           response.data['data'].isNotEmpty) {
+        
         // แปลง available_qty อย่างปลอดภัย ไม่ว่าจะเป็น String หรือ number
         final dynamic rawQty = response.data['data'][0]['available_qty'];
         final double availableQty;
-
+        
         if (rawQty is String) {
           availableQty = double.tryParse(rawQty) ?? 0.0;
         } else if (rawQty is num) {
@@ -675,7 +603,7 @@ class CartRemoteDataSource implements CartDataSource {
         } else {
           availableQty = 0.0;
         }
-
+        
         logger.d(
           '📦 Real-time available quantity for $icCode (excluding customer $currentCustomerId): $availableQty',
         );
@@ -717,14 +645,13 @@ class CartRemoteDataSource implements CartDataSource {
       final Map<String, double> availableMap = {};
 
       if (response.data['success'] == true && response.data['data'] != null) {
-        final List<dynamic> results = response.data['data'];
-        for (final result in results) {
+        final List<dynamic> results = response.data['data'];        for (final result in results) {
           final String? icCode = result['ic_code']?.toString();
-
+          
           // แปลง available_qty อย่างปลอดภัย ไม่ว่าจะเป็น String หรือ number
           final dynamic rawQty = result['available_qty'];
           final double availableQty;
-
+          
           if (rawQty is String) {
             availableQty = double.tryParse(rawQty) ?? 0.0;
           } else if (rawQty is num) {
@@ -752,109 +679,6 @@ class CartRemoteDataSource implements CartDataSource {
         debugPrint('💥 Error getting available quantities for cart: $e');
       }
       return <String, double>{};
-    }
-  }
-
-  /// Refresh ยอดคงเหลือจากฐานข้อมูลหลัก (ic_balance)
-  /// เรียกใช้เพื่อ sync ข้อมูลคงเหลือล่าสุดจาก inventory system
-  Future<bool> refreshInventoryBalance({required String icCode}) async {
-    try {
-      // Query เพื่อ refresh ยอดคงเหลือจากระบบหลัก
-      final refreshQuery =
-          """
-        -- Refresh balance from main inventory system
-        -- This would typically sync from ic_inventory to ic_balance
-        UPDATE ic_balance 
-        SET balance_qty = (
-          SELECT COALESCE(on_hand_qty, 0) 
-          FROM ic_inventory 
-          WHERE ic_code = '$icCode'
-        ),
-        updated_at = CURRENT_TIMESTAMP
-        WHERE ic_code = '$icCode';
-        
-        -- Insert if not exists
-        INSERT INTO ic_balance (ic_code, balance_qty, updated_at)
-        SELECT '$icCode', COALESCE(on_hand_qty, 0), CURRENT_TIMESTAMP
-        FROM ic_inventory 
-        WHERE ic_code = '$icCode'
-        AND NOT EXISTS (SELECT 1 FROM ic_balance WHERE ic_code = '$icCode');
-      """;
-
-      final response = await dio.post(
-        '/pgcommand',
-        data: {'query': refreshQuery},
-      );
-
-      if (kDebugMode) {
-        logger.d(
-          '🔄 [DATA_SOURCE] Refresh inventory balance for $icCode: ${response.data}',
-        );
-      }
-
-      if (response.data['success'] == true) {
-        logger.d('✅ Inventory balance refreshed for $icCode');
-        return true;
-      } else {
-        logger.w('⚠️ Failed to refresh inventory balance for $icCode');
-        return false;
-      }
-    } catch (e) {
-      logger.e('⛔ Error refreshing inventory balance for $icCode', error: e);
-      return false;
-    }
-  }
-
-  /// Refresh ยอดคงเหลือสำหรับหลายสินค้าพร้อมกัน
-  Future<bool> refreshMultipleInventoryBalances({
-    required List<String> icCodes,
-  }) async {
-    try {
-      if (icCodes.isEmpty) return true;
-
-      final icCodeList = icCodes.map((code) => "'$code'").join(',');
-
-      final refreshQuery =
-          """
-        -- Refresh balance from main inventory system for multiple items
-        UPDATE ic_balance 
-        SET balance_qty = (
-          SELECT COALESCE(on_hand_qty, 0) 
-          FROM ic_inventory 
-          WHERE ic_inventory.ic_code = ic_balance.ic_code
-        ),
-        updated_at = CURRENT_TIMESTAMP
-        WHERE ic_code IN ($icCodeList);
-        
-        -- Insert missing items
-        INSERT INTO ic_balance (ic_code, balance_qty, updated_at)
-        SELECT ic_code, COALESCE(on_hand_qty, 0), CURRENT_TIMESTAMP
-        FROM ic_inventory 
-        WHERE ic_code IN ($icCodeList)
-        AND NOT EXISTS (SELECT 1 FROM ic_balance WHERE ic_balance.ic_code = ic_inventory.ic_code);
-      """;
-
-      final response = await dio.post(
-        '/pgcommand',
-        data: {'query': refreshQuery},
-      );
-
-      if (kDebugMode) {
-        logger.d(
-          '🔄 [DATA_SOURCE] Refresh multiple inventory balances: ${response.data}',
-        );
-      }
-
-      if (response.data['success'] == true) {
-        logger.d('✅ Inventory balances refreshed for ${icCodes.length} items');
-        return true;
-      } else {
-        logger.w('⚠️ Failed to refresh inventory balances');
-        return false;
-      }
-    } catch (e) {
-      logger.e('⛔ Error refreshing multiple inventory balances', error: e);
-      return false;
     }
   }
 }

@@ -65,9 +65,7 @@ class CartCubit extends Cubit<CartState> {
         unitCode: product.unitStandardCode,
         quantity: quantity,
         unitPrice: unitPrice,
-      );
-
-      emit(
+      );      emit(
         CartSuccess(
           cartItem: cartItem,
           message: 'เพิ่มสินค้าเข้าตระกร้าเรียบร้อย',
@@ -75,6 +73,10 @@ class CartCubit extends Cubit<CartState> {
       );
 
       logger.d('Successfully added to cart: ${cartItem.toJson()}');
+      
+      // ⭐ REFRESH ยอดคงเหลือหลังจากเพิ่มสินค้าลงตะกร้า
+      await _refreshStockQuantitiesAfterUpdate(icCode);
+      
     } catch (e) {
       logger.e('Error adding to cart: $e');
 
@@ -147,12 +149,17 @@ class CartCubit extends Cubit<CartState> {
       _currentCustomerId = customer;
       _lastLoadTime = DateTime.now();
 
-      logger.i('🛒 [CUBIT] Loading cart for customer: $customer');
-
-      // ดึงรายการสินค้าในตระกร้า
+      logger.i('🛒 [CUBIT] Loading cart for customer: $customer');      // ดึงรายการสินค้าในตระกร้า
       final items = await repository.getCartItems(
         customerId: int.parse(customer),
       );
+
+      // ดึงข้อมูลยอดคงเหลือสำหรับสินค้าในตะกร้า
+      Map<String, double> stockQuantities = {};
+      if (items.isNotEmpty) {
+        final icCodes = items.map((item) => item.icCode).toList();
+        stockQuantities = await repository.getStockQuantities(icCodes: icCodes);
+      }
 
       // คำนวณยอดรวม
       double totalAmount = 0.0;
@@ -176,6 +183,7 @@ class CartCubit extends Cubit<CartState> {
           totalAmount: totalAmount,
           totalItems: totalItems,
           cartId: int.tryParse(_currentCartId ?? ''),
+          stockQuantities: stockQuantities,
         ),
       );
     } catch (e) {
@@ -219,20 +227,17 @@ class CartCubit extends Cubit<CartState> {
         for (var item in updatedItems) {
           totalAmount += (item.unitPrice ?? 0.0) * item.quantity;
           totalItems += item.quantity;
-        }
-
-        // อัปเดต state ทันที
+        }        // อัปเดต state ทันที (คงข้อมูล stockQuantities เดิมไว้)
         emit(
           CartLoaded(
             items: updatedItems,
             totalAmount: totalAmount,
             totalItems: totalItems,
             cartId: currentState.cartId,
+            stockQuantities: currentState.stockQuantities, // ⭐ คงข้อมูลยอดคงเหลือไว้
           ),
         );
-      }
-
-      // อัปเดตในฐานข้อมูลใน background
+      }      // อัปเดตในฐานข้อมูลใน background
       await repository.updateCartItemQuantity(
         icCode: icCode,
         quantity: newQuantity,
@@ -240,6 +245,10 @@ class CartCubit extends Cubit<CartState> {
       );
 
       logger.d('✅ [CUBIT] Updated quantity for $icCode: $newQuantity');
+      
+      // ⭐ REFRESH ยอดคงเหลือใหม่หลังจากอัปเดตจำนวนสินค้า
+      await _refreshStockQuantitiesAfterUpdate(icCode);
+      
     } catch (e) {
       logger.e('❌ [CUBIT] Error updating quantity: $e');
       // ถ้าเกิดข้อผิดพลาด โหลดข้อมูลใหม่
@@ -248,6 +257,37 @@ class CartCubit extends Cubit<CartState> {
     }
   }
 
+  /// Refresh ยอดคงเหลือหลังจากอัปเดตจำนวนสินค้า
+  Future<void> _refreshStockQuantitiesAfterUpdate(String icCode) async {
+    try {
+      final currentState = state;
+      if (currentState is CartLoaded) {
+        // ดึงยอดคงเหลือใหม่สำหรับสินค้าที่ถูกอัปเดต
+        final icCodes = [icCode]; // อัปเดตเฉพาะสินค้าที่เปลี่ยนแปลง
+        final newStockQuantities = await repository.getStockQuantities(icCodes: icCodes);
+        
+        // รวมกับยอดคงเหลือเดิมของสินค้าอื่นๆ
+        final updatedStockQuantities = Map<String, double>.from(currentState.stockQuantities);
+        updatedStockQuantities.addAll(newStockQuantities);
+        
+        // อัปเดต state พร้อมยอดคงเหลือใหม่
+        emit(
+          CartLoaded(
+            items: currentState.items,
+            totalAmount: currentState.totalAmount,
+            totalItems: currentState.totalItems,
+            cartId: currentState.cartId,
+            stockQuantities: updatedStockQuantities, // ⭐ ยอดคงเหลือใหม่
+          ),
+        );
+        
+        logger.d('📊 [CUBIT] Refreshed stock quantity for $icCode: ${newStockQuantities[icCode]}');
+      }
+    } catch (e) {
+      logger.e('⚠️ [CUBIT] Could not refresh stock quantities: $e');
+      // ไม่ throw error เพราะ main operation (update quantity) สำเร็จแล้ว
+    }
+  }
   Future<void> removeFromCart({required String icCode}) async {
     try {
       emit(CartLoading());
@@ -259,7 +299,7 @@ class CartCubit extends Cubit<CartState> {
 
       logger.d('✅ [CUBIT] Removed $icCode from cart');
 
-      // Reload cart to get updated data
+      // Reload cart to get updated data พร้อมยอดคงเหลือใหม่
       await loadCart(customerId: _currentCustomerId);
     } catch (e) {
       logger.e('❌ [CUBIT] Error removing from cart: $e');

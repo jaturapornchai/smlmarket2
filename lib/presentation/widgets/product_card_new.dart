@@ -63,7 +63,8 @@ class _ProductCardState extends State<ProductCard>
               elevation: 3,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
-              ),              child: InkWell(
+              ),
+              child: InkWell(
                 onTap: qtyAvailable > 0 ? () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
@@ -75,8 +76,9 @@ class _ProductCardState extends State<ProductCard>
                 onTapDown: qtyAvailable > 0 ? (_) => _animationController.forward() : null,
                 onTapUp: qtyAvailable > 0 ? (_) => _animationController.reverse() : null,
                 onTapCancel: qtyAvailable > 0 ? () => _animationController.reverse() : null,
-                borderRadius: BorderRadius.circular(12),                child: Container(
-                  height: 450, // เพิ่มความสูงเพื่อรองรับข้อมูลเพิ่มเติม
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  height: 480, // เพิ่มความสูงเพื่อรองรับชื่อสินค้าแบบยาว
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(12),
                     color: Colors.white,
@@ -92,14 +94,14 @@ class _ProductCardState extends State<ProductCard>
                       // Product Image
                       _buildProductImage(),
 
-                      // Product Details - ใช้ flex ที่กำหนดเพื่อควบคุมพื้นที่
+                      // Product Details
                       Expanded(
-                        flex: 5,
                         child: Padding(
                           padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [                              // Product Name - แสดงเต็มไม่ตัดบรรทัด
+                            children: [
+                              // Product Name - แสดงเต็มไม่ตัดบรรทัด
                               Container(
                                 width: double.infinity,
                                 child: Text(
@@ -115,7 +117,7 @@ class _ProductCardState extends State<ProductCard>
                               ),
                               const SizedBox(height: 8),
 
-                              // Product code and unit name / รหัสสินค้า และชื่อหน่วย
+                              // Product code and unit name
                               Row(
                                 children: [
                                   Expanded(
@@ -168,43 +170,43 @@ class _ProductCardState extends State<ProductCard>
                               ),
                               const SizedBox(height: 8),
 
-                              // Premium word / คำพิเศษ
+                              // Premium word
                               if (widget.product.premiumWord != null &&
                                   widget.product.premiumWord!.isNotEmpty &&
                                   widget.product.premiumWord != 'N/A')
                                 _buildPremiumWord(widget.product.premiumWord!),
 
-                              // Discount information / ข้อมูลส่วนลด
+                              // Discount information
                               if (widget.product.discountPrice != null &&
                                   widget.product.discountPrice! > 0)
                                 _buildDiscountInfo(),
 
-                              // Multi-packing information / ข้อมูลการบรรจุหลายชิ้น
-                              if (widget.product.hasMultiplePacking)
+                              // Multi-packing information
+                              if (widget.product.hasMultiPackingName)
                                 _buildMultiPackingInfo(),
 
-                              // Sold quantity / จำนวนที่ขายไปแล้ว
+                              // Sold quantity
                               if (widget.product.soldQty != null &&
                                   widget.product.soldQty! > 0)
                                 _buildSoldQuantityInfo(),
 
-                              // Barcode (if available) / Barcode (ถ้ามี)
+                              // Barcode
                               if (widget.product.barcodes != null &&
                                   widget.product.barcodes!.isNotEmpty &&
                                   widget.product.barcodes != 'N/A')
                                 _buildBarcodeInfo(widget.product.barcodes!),
 
-                              // Stock quantity (with comma separator) / ยอดคงเหลือ (ใส่ comma คั่นหลักพัน)
+                              // Stock quantity
                               _buildStockInfo(qtyAvailable),
 
-                              // Spacer เพื่อดันราคาไปด้านล่าง
+                              // Spacer
                               const Spacer(),
                             ],
                           ),
                         ),
                       ),
 
-                      // Price Section - อยู่ด้านล่างสุดของกล่องสินค้าเสมอ
+                      // Price Section
                       Container(
                         padding: const EdgeInsets.all(12),
                         child: _buildPriceSection(finalPrice),
@@ -257,24 +259,12 @@ class _ProductCardState extends State<ProductCard>
                   const SizedBox(height: 8),
                   Text(
                     'ไม่มีรูปภาพ',
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey.shade600,
+                    ),
                   ),
                 ],
-              ),
-            );
-          },
-          loadingBuilder: (context, child, loadingProgress) {
-            if (loadingProgress == null) return child;
-            return Container(
-              color: Colors.grey.shade50,
-              child: Center(
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  value: loadingProgress.expectedTotalBytes != null
-                      ? loadingProgress.cumulativeBytesLoaded /
-                            (loadingProgress.expectedTotalBytes ?? 1)
-                      : null,
-                ),
               ),
             );
           },
@@ -283,38 +273,6 @@ class _ProductCardState extends State<ProductCard>
     );
   }
 
-  Widget _buildStockInfo(double qtyAvailable) {
-    final isAvailable = qtyAvailable > 0;
-    final stockText = isAvailable
-        ? 'คงเหลือ ${NumberFormatter.formatQuantity(qtyAvailable)}'
-        : 'หมด';
-    final stockColor = isAvailable ? Colors.green : Colors.red;
-    final stockIcon = isAvailable ? Icons.check_circle : Icons.cancel;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: stockColor.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: stockColor.withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(stockIcon, size: 14, color: stockColor),
-          const SizedBox(width: 4),
-          Text(
-            stockText,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: stockColor,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
   Widget _buildPriceSection(double finalPrice) {
     final qtyAvailable = widget.product.qtyAvailable ?? 0;
     final hasPrice = finalPrice > 0;
@@ -492,7 +450,8 @@ class _ProductCardState extends State<ProductCard>
               color: Colors.white,
             ),
           ),
-          const SizedBox(width: 8),          Icon(
+          const SizedBox(width: 8),
+          Icon(
             Icons.attach_money,
             color: Colors.white,
             size: 24,
@@ -519,9 +478,9 @@ class _ProductCardState extends State<ProductCard>
           Text(
             premiumWord,
             style: TextStyle(
-              fontSize: 10,
+              fontSize: 11,
               fontWeight: FontWeight.w600,
-              color: Colors.amber.shade700,
+              color: Colors.amber.shade800,
             ),
           ),
         ],
@@ -547,84 +506,39 @@ class _ProductCardState extends State<ProductCard>
         children: [
           Icon(Icons.local_offer, size: 12, color: Colors.red.shade700),
           const SizedBox(width: 4),
-          Text(
-            discountWord != null &&
-                    discountWord.isNotEmpty &&
-                    discountWord != 'N/A'
-                ? discountWord
-                : discountPercent > 0
-                ? 'ลด ${NumberFormatter.formatPrice(discountPercent)}%'
-                : 'ลด ฿${NumberFormatter.formatPrice(discountPrice)}',
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              color: Colors.red.shade700,
+          if (discountPercent > 0)
+            Text(
+              'ลด ${discountPercent.toStringAsFixed(0)}%',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: Colors.red.shade800,
+              ),
+            )
+          else if (discountPrice > 0)
+            Text(
+              'ลด ${NumberFormatter.formatCurrency(discountPrice)}',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: Colors.red.shade800,
+              ),
+            )
+          else if (discountWord != null && discountWord.isNotEmpty)
+            Text(
+              discountWord,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: Colors.red.shade800,
+              ),
             ),
-          ),
         ],
       ),
     );
   }
 
   Widget _buildMultiPackingInfo() {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.indigo.shade50,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: Colors.indigo.shade200),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.inventory_2, size: 12, color: Colors.indigo.shade700),
-          const SizedBox(width: 4),
-          Expanded(
-            child: Text(
-              'แพ็ค: ${widget.product.packingOptions.join(", ")}',
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-                color: Colors.indigo.shade700,
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSoldQuantityInfo() {
-    final soldQty = widget.product.soldQty ?? 0;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.teal.shade50,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: Colors.teal.shade200),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.trending_up, size: 12, color: Colors.teal.shade700),
-          const SizedBox(width: 4),
-          Text(
-            'ขายแล้ว: ${NumberFormatter.formatQuantity(soldQty)}',
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              color: Colors.teal.shade700,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBarcodeInfo(String barcodes) {
     return Container(
       margin: const EdgeInsets.only(bottom: 4),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -636,17 +550,121 @@ class _ProductCardState extends State<ProductCard>
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.qr_code, size: 12, color: Colors.purple.shade700),
+          Icon(Icons.inventory_2, size: 12, color: Colors.purple.shade700),
           const SizedBox(width: 4),
-          Expanded(
-            child: Text(
-              'Barcode: $barcodes',
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w500,
-                color: Colors.purple.shade700,
-              ),
-              overflow: TextOverflow.ellipsis,
+          Text(
+            'แพ็ค: ${widget.product.packingOptions.join(", ")}',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: Colors.purple.shade800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSoldQuantityInfo() {
+    final soldQty = widget.product.soldQty ?? 0;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.green.shade50,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: Colors.green.shade200),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.trending_up, size: 12, color: Colors.green.shade700),
+          const SizedBox(width: 4),
+          Text(
+            'ขายแล้ว: ${NumberFormatter.formatQuantity(soldQty)}',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: Colors.green.shade800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBarcodeInfo(String barcodes) {
+    final barcodeList = barcodes.split(',').map((e) => e.trim()).take(1);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.qr_code_2, size: 12, color: Colors.grey.shade700),
+          const SizedBox(width: 4),
+          Text(
+            'บาร์โค้ด: ${barcodeList.first}',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: Colors.grey.shade800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStockInfo(double qtyAvailable) {
+    Color bgColor;
+    Color textColor;
+    String text;
+    IconData icon;
+
+    if (qtyAvailable <= 0) {
+      bgColor = Colors.red.shade100;
+      textColor = Colors.red.shade700;
+      text = 'สินค้าหมด';
+      icon = Icons.remove_shopping_cart;
+    } else if (qtyAvailable <= 5) {
+      bgColor = Colors.orange.shade100;
+      textColor = Colors.orange.shade700;
+      text = 'เหลือน้อย (${NumberFormatter.formatQuantity(qtyAvailable)})';
+      icon = Icons.warning;
+    } else {
+      bgColor = Colors.green.shade100;
+      textColor = Colors.green.shade700;
+      text = 'คงเหลือ: ${NumberFormatter.formatQuantity(qtyAvailable)}';
+      icon = Icons.check_circle;
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: textColor.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: textColor),
+          const SizedBox(width: 4),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: textColor,
             ),
           ),
         ],

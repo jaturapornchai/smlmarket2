@@ -6,7 +6,7 @@ import '../../data/models/cart_item_model.dart';
 import '../../utils/number_formatter.dart';
 import '../cubit/cart_cubit.dart';
 import '../cubit/cart_state.dart';
-import '../widgets/cart_item_widget.dart';
+import '../widgets/cart_item_widget_new.dart';
 import '../widgets/cart_summary_widget.dart';
 import '../widgets/empty_cart_widget.dart';
 
@@ -44,8 +44,7 @@ class _CartScreenState extends State<CartScreen> {
       backgroundColor: Colors.grey[50],
       appBar: _buildAppBar(),
       body: BlocConsumer<CartCubit, CartState>(
-        listener: _handleStateListener,
-        buildWhen: (previous, current) {
+        listener: _handleStateListener,        buildWhen: (previous, current) {
           // Rebuild เฉพาะเมื่อ state เปลี่ยนจริงๆ
           if (previous.runtimeType != current.runtimeType) return true;
           if (current is CartLoaded && previous is CartLoaded) {
@@ -53,6 +52,14 @@ class _CartScreenState extends State<CartScreen> {
             if (previous.items.length != current.items.length) return true;
             if (previous.totalAmount != current.totalAmount) return true;
             if (previous.totalItems != current.totalItems) return true;
+
+            // ⭐ ตรวจสอบการเปลี่ยนแปลงของ stockQuantities
+            if (previous.stockQuantities.length != current.stockQuantities.length) return true;
+            for (final icCode in current.stockQuantities.keys) {
+              if (previous.stockQuantities[icCode] != current.stockQuantities[icCode]) {
+                return true;
+              }
+            }
 
             // ตรวจสอบการเปลี่ยนแปลงใน items แต่ละตัว
             for (int i = 0; i < current.items.length; i++) {
@@ -213,12 +220,13 @@ class _CartScreenState extends State<CartScreen> {
         Expanded(
           child: ListView.builder(
             padding: const EdgeInsets.all(16),
-            itemCount: state.items.length,
-            itemBuilder: (context, index) {
+            itemCount: state.items.length,            itemBuilder: (context, index) {
               final item = state.items[index];
+              final qtyAvailable = state.stockQuantities[item.icCode];
               return CartItemWidget(
                 key: ValueKey('cart_item_${item.icCode}_${item.id}'),
                 item: item,
+                qtyAvailable: qtyAvailable,
                 onQuantityChanged: (newQuantity) =>
                     _updateQuantity(item, newQuantity),
                 onRemove: () => _removeItem(item),
