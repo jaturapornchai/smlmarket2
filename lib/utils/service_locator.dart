@@ -4,11 +4,13 @@ import 'package:logger/logger.dart';
 
 import '../data/data_sources/cart_remote_data_source.dart';
 import '../data/data_sources/product_remote_data_source.dart';
+import '../data/data_sources/quotation_api_data_source.dart';
 import '../data/repositories/cart_repository.dart';
 import '../data/repositories/product_repository.dart';
 import '../presentation/cubit/cart_cubit.dart';
 import '../presentation/cubit/login_cubit.dart';
 import '../presentation/cubit/product_search_cubit.dart';
+import '../presentation/cubit/quotation_cubit.dart';
 
 final GetIt sl = GetIt.instance;
 
@@ -32,6 +34,10 @@ Future<void> init() async {
     () => CartRemoteDataSource(dio: sl(), logger: sl()),
   );
 
+  sl.registerLazySingleton<QuotationApiDataSource>(
+    () => QuotationApiDataSource(sl()),
+  );
+
   // Repositories
   sl.registerLazySingleton<ProductRepository>(
     () => ProductRepositoryImpl(remoteDataSource: sl()),
@@ -49,6 +55,8 @@ Future<void> init() async {
   sl.registerFactory<CartCubit>(
     () => CartCubit(repository: sl(), logger: sl()),
   );
+
+  sl.registerFactory<QuotationCubit>(() => QuotationCubit(sl()));
 
   sl.registerFactory<LoginCubit>(() => LoginCubit());
 }

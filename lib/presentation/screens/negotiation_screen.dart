@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../data/models/quotation_model.dart';
 import '../../data/models/quotation_enums.dart';
 import '../../utils/number_formatter.dart';
+import '../cubit/quotation_cubit.dart';
 
 /// หน้าจอการต่อรองราคาและขอยืนยันจำนวน
 class NegotiationScreen extends StatefulWidget {
@@ -665,14 +667,49 @@ class _NegotiationScreenState extends State<NegotiationScreen> {
     });
 
     try {
-      // TODO: เรียก API เพื่อส่งข้อเสนอ
-      await Future.delayed(const Duration(seconds: 2));
+      // สร้างข้อมูลการต่อรอง
+      for (final negotiation in activeNegotiations) {
+        final negotiationData = QuotationNegotiation(
+          id: 0, // จะถูกสร้างใหม่ในฐานข้อมูล
+          quotationId: widget.quotation.id,
+          quotationItemId: null, // สำหรับการต่อรองทั้งใบ
+          negotiationType: _negotiationType,
+          fromRole: NegotiationRole.customer,
+          toRole: NegotiationRole.seller,
+          proposedQuantity:
+              _negotiationType == NegotiationType.quantity ||
+                  _negotiationType == NegotiationType.both
+              ? negotiation.proposedQuantity
+              : null,
+          proposedUnitPrice:
+              _negotiationType == NegotiationType.price ||
+                  _negotiationType == NegotiationType.both
+              ? negotiation.proposedUnitPrice
+              : null,
+          proposedTotalPrice:
+              _negotiationType == NegotiationType.price ||
+                  _negotiationType == NegotiationType.both ||
+                  _negotiationType == NegotiationType.quantity
+              ? negotiation.proposedTotalPrice
+              : null,
+          message: _messageController.text.trim().isNotEmpty
+              ? _messageController.text.trim()
+              : null,
+          status: NegotiationStatus.pending,
+          createdAt: DateTime.now(),
+        );
+
+        // เรียก API เพื่อส่งข้อเสนอผ่าน QuotationCubit
+        final quotationCubit = context.read<QuotationCubit>();
+        await quotationCubit.createNegotiation(negotiationData);
+      }
 
       if (mounted) {
         Navigator.pop(context, true); // ส่งค่า true เพื่อบอกว่าส่งข้อเสนอสำเร็จ
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('ส่งข้อเสนอเรียบร้อย รอการตอบกลับจากผู้ขาย'),
+            backgroundColor: Colors.green,
           ),
         );
       }

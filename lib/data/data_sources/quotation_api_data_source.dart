@@ -45,7 +45,15 @@ class QuotationApiDataSource {
     List<QuotationItem> items,
   ) async {
     try {
+      print(
+        '🔍 [API] Creating ${items.length} quotation items for quotation ID: $quotationId',
+      );
+
       for (final item in items) {
+        print(
+          '📦 [API] Creating item: ${item.icCode} x${item.originalQuantity}',
+        );
+
         final query =
             '''
           INSERT INTO quotation_items (
@@ -60,11 +68,20 @@ class QuotationApiDataSource {
                     ${item.requestedQuantity}, ${item.requestedUnitPrice}, ${item.requestedTotalPrice},
                     '${item.status.value}', 
                     ${item.itemNotes != null ? "'${item.itemNotes}'" : 'NULL'})
+          RETURNING id
         ''';
 
-        await _dio.post('/pgcommand', data: {'query': query});
+        final response = await _dio.post('/pgcommand', data: {'query': query});
+        print('📄 [API] Create item response: ${response.data}');
+
+        if (response.statusCode != 200 || response.data['success'] != true) {
+          throw Exception('Failed to create quotation item for ${item.icCode}');
+        }
       }
+
+      print('✅ [API] Successfully created all quotation items');
     } catch (e) {
+      print('❌ [API] Error creating quotation items: $e');
       throw Exception('Error creating quotation items: $e');
     }
   }
@@ -72,6 +89,7 @@ class QuotationApiDataSource {
   // ดึงรายการใบขอยืนยันราคาของลูกค้า
   Future<List<Quotation>> getQuotationsByCustomer(int customerId) async {
     try {
+      print('🔍 [QUOTATION_API] Getting quotations for customer: $customerId');
       final query =
           '''
         SELECT q.*, 
@@ -85,13 +103,16 @@ class QuotationApiDataSource {
       ''';
 
       final response = await _dio.post('/pgselect', data: {'query': query});
+      print('📄 [QUOTATION_API] Response: ${response.data}');
 
       if (response.statusCode == 200 && response.data['success'] == true) {
         final List<dynamic> data = response.data['data'] ?? [];
+        print('✅ [QUOTATION_API] Found ${data.length} quotations');
         return data.map((json) => Quotation.fromJson(json)).toList();
       }
       throw Exception('Failed to fetch quotations');
     } catch (e) {
+      print('❌ [QUOTATION_API] Error: $e');
       throw Exception('Error fetching quotations: $e');
     }
   }
@@ -121,6 +142,7 @@ class QuotationApiDataSource {
   // ดึงรายการสินค้าในใบขอยืนยันราคา
   Future<List<QuotationItem>> getQuotationItems(int quotationId) async {
     try {
+      print('🔍 [API] Getting quotation items for quotation ID: $quotationId');
       final query =
           '''
         SELECT * FROM quotation_items 
@@ -129,9 +151,11 @@ class QuotationApiDataSource {
       ''';
 
       final response = await _dio.post('/pgselect', data: {'query': query});
+      print('📄 [API] Quotation items response: ${response.data}');
 
       if (response.statusCode == 200 && response.data['success'] == true) {
         final List<dynamic> data = response.data['data'] ?? [];
+        print('✅ [API] Found ${data.length} quotation items');
         return data.map((json) => QuotationItem.fromJson(json)).toList();
       }
       throw Exception('Failed to fetch quotation items');
@@ -167,34 +191,43 @@ class QuotationApiDataSource {
   // ส่งข้อเสนอการเจรจา
   Future<int> createNegotiation(QuotationNegotiation negotiation) async {
     try {
+      print(
+        '🔍 [API] Creating negotiation for quotation: ${negotiation.quotationId}',
+      );
+
       final query =
           '''
         INSERT INTO quotation_negotiations (
           quotation_id, quotation_item_id, negotiation_type, 
           from_role, to_role, proposed_quantity, proposed_unit_price,
           proposed_total_price, message
-        ) VALUES ($negotiation.quotationId, 
-                  ${negotiation.quotationItemId}, 
+        ) VALUES (${negotiation.quotationId}, 
+                  ${negotiation.quotationItemId != null ? negotiation.quotationItemId : 'NULL'}, 
                   '${negotiation.negotiationType.value}',
                   '${negotiation.fromRole.value}', 
                   '${negotiation.toRole.value}', 
-                  ${negotiation.proposedQuantity}, 
-                  ${negotiation.proposedUnitPrice},
-                  ${negotiation.proposedTotalPrice}, 
+                  ${negotiation.proposedQuantity ?? 'NULL'}, 
+                  ${negotiation.proposedUnitPrice ?? 'NULL'},
+                  ${negotiation.proposedTotalPrice ?? 'NULL'}, 
                   ${negotiation.message != null ? "'${negotiation.message}'" : 'NULL'})
         RETURNING id
       ''';
 
+      print('📄 [API] Negotiation query: $query');
       final response = await _dio.post('/pgcommand', data: {'query': query});
+      print('📄 [API] Negotiation response: ${response.data}');
 
       if (response.statusCode == 200 && response.data['success'] == true) {
         final result = response.data['data'];
         if (result != null && result.isNotEmpty) {
-          return result[0]['id'] as int;
+          final negotiationId = result[0]['id'] as int;
+          print('✅ [API] Negotiation created with ID: $negotiationId');
+          return negotiationId;
         }
       }
       throw Exception('Failed to create negotiation');
     } catch (e) {
+      print('❌ [API] Error creating negotiation: $e');
       throw Exception('Error creating negotiation: $e');
     }
   }
@@ -355,18 +388,26 @@ class QuotationApiDataSource {
   // ดึงใบขอยืนยันราคาพร้อมรายการสินค้าและประวัติการเจรจา
   Future<Quotation?> getQuotationWithDetails(int quotationId) async {
     try {
+      print('🔍 [API] Getting quotation with details for ID: $quotationId');
+
       // ดึงข้อมูลใบขอยืนยันราคา
       final quotation = await getQuotationById(quotationId);
-      if (quotation == null) return null;
+      if (quotation == null) {
+        print('❌ [API] Quotation not found');
+        return null;
+      }
+      print('✅ [API] Base quotation loaded');
 
       // ดึงรายการสินค้า
       final items = await getQuotationItems(quotationId);
+      print('✅ [API] Loaded ${items.length} items');
 
       // ดึงประวัติการเจรจา
       final negotiations = await getNegotiationHistory(quotationId);
+      print('✅ [API] Loaded ${negotiations.length} negotiations');
 
       // สร้าง Quotation object ใหม่พร้อมข้อมูลครบถ้วน
-      return Quotation(
+      final result = Quotation(
         id: quotation.id,
         cartId: quotation.cartId,
         customerId: quotation.customerId,
@@ -385,7 +426,11 @@ class QuotationApiDataSource {
         items: items,
         negotiations: negotiations,
       );
+
+      print('✅ [API] Quotation with details created successfully');
+      return result;
     } catch (e) {
+      print('❌ [API] Error fetching quotation with details: $e');
       throw Exception('Error fetching quotation with details: $e');
     }
   }

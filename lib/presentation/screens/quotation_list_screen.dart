@@ -1,53 +1,41 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../data/models/quotation_model.dart';
 import '../../data/models/quotation_enums.dart';
 import '../../utils/number_formatter.dart';
+import '../../utils/thai_date_formatter.dart';
+import '../cubit/quotation_cubit.dart';
+import '../cubit/quotation_state.dart';
 import 'quotation_detail_screen.dart';
 
 /// หน้าจอรายการใบขอยืนยันราคาและขอยืนยันจำนวน
 class QuotationListScreen extends StatefulWidget {
-  const QuotationListScreen({super.key});
+  final int customerId;
+
+  const QuotationListScreen({
+    super.key,
+    this.customerId = 123, // TODO: ใช้ customer ID จริงจาก session
+  });
 
   @override
   State<QuotationListScreen> createState() => _QuotationListScreenState();
 }
 
 class _QuotationListScreenState extends State<QuotationListScreen> {
-  List<Quotation> quotations = [];
-  bool isLoading = false;
   QuotationStatus? filterStatus;
 
   @override
   void initState() {
     super.initState();
-    _loadQuotations();
+    // โหลดข้อมูลเมื่อเปิดหน้าจอ
+    context.read<QuotationCubit>().loadQuotations(widget.customerId);
   }
 
   Future<void> _loadQuotations() async {
-    setState(() {
-      isLoading = true;
-    });
-
-    try {
-      // TODO: โหลดข้อมูลจาก API
-      // For now, mock data
-      await Future.delayed(const Duration(milliseconds: 500));
-      setState(() {
-        quotations = _getMockQuotations();
-      });
-    } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('เกิดข้อผิดพลาด: $e')));
-    } finally {
-      setState(() {
-        isLoading = false;
-      });
-    }
+    context.read<QuotationCubit>().loadQuotations(widget.customerId);
   }
 
-  List<Quotation> get filteredQuotations {
+  List<Quotation> _filterQuotations(List<Quotation> quotations) {
     if (filterStatus == null) return quotations;
     return quotations.where((q) => q.status == filterStatus).toList();
   }
@@ -59,6 +47,16 @@ class _QuotationListScreenState extends State<QuotationListScreen> {
         title: const Text('ใบขอยืนยันราคาและขอยืนยันจำนวน'),
         backgroundColor: Colors.blue.shade600,
         foregroundColor: Colors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.home),
+          onPressed: () {
+            // นำทางกลับไปหน้าแรก (ProductSearchScreen) แทนการกลับแบบปกติ
+            Navigator.of(
+              context,
+            ).pushNamedAndRemoveUntil('/', (route) => false);
+          },
+          tooltip: 'กลับหน้าแรก',
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.filter_list),
@@ -70,19 +68,55 @@ class _QuotationListScreenState extends State<QuotationListScreen> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          if (filterStatus != null) _buildFilterChip(),
-          Expanded(
-            child: isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : filteredQuotations.isEmpty
-                ? _buildEmptyState()
-                : _buildQuotationList(),
-          ),
-        ],
+      body: BlocConsumer<QuotationCubit, QuotationState>(
+        listener: (context, state) {
+          if (state is QuotationError) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        },
+        builder: (context, state) {
+          return Column(
+            children: [
+              if (filterStatus != null) _buildFilterChip(),
+              Expanded(child: _buildBody(state)),
+            ],
+          );
+        },
       ),
     );
+  }
+
+  Widget _buildBody(QuotationState state) {
+    if (state is QuotationLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (state is QuotationLoaded) {
+      final filteredQuotations = _filterQuotations(state.quotations);
+
+      if (filteredQuotations.isEmpty) {
+        return _buildEmptyState();
+      }
+
+      return RefreshIndicator(
+        onRefresh: _loadQuotations,
+        child: ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: filteredQuotations.length,
+          itemBuilder: (context, index) {
+            final quotation = filteredQuotations[index];
+            return _buildQuotationCard(quotation);
+          },
+        ),
+      );
+    }
+
+    return _buildEmptyState();
   }
 
   Widget _buildFilterChip() {
@@ -130,20 +164,6 @@ class _QuotationListScreenState extends State<QuotationListScreen> {
             style: TextStyle(color: Colors.grey.shade500),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildQuotationList() {
-    return RefreshIndicator(
-      onRefresh: _loadQuotations,
-      child: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: filteredQuotations.length,
-        itemBuilder: (context, index) {
-          final quotation = filteredQuotations[index];
-          return _buildQuotationCard(quotation);
-        },
       ),
     );
   }
@@ -206,9 +226,9 @@ class _QuotationListScreenState extends State<QuotationListScreen> {
                     child: _buildInfoItem(
                       Icons.calendar_today,
                       'วันที่สร้าง',
-                      DateFormat(
-                        'dd/MM/yyyy HH:mm',
-                      ).format(quotation.createdAt),
+                      ThaiDateFormatter.formatFullThaiWithTimeAndWeekday(
+                        quotation.createdAt,
+                      ),
                     ),
                   ),
                   if (quotation.expiresAt != null)
@@ -216,7 +236,9 @@ class _QuotationListScreenState extends State<QuotationListScreen> {
                       child: _buildInfoItem(
                         Icons.schedule,
                         'หมดอายุ',
-                        DateFormat('dd/MM/yyyy').format(quotation.expiresAt!),
+                        ThaiDateFormatter.formatFullThaiWithTimeAndWeekday(
+                          quotation.expiresAt!,
+                        ),
                         color: _isExpiringSoon(quotation.expiresAt!)
                             ? Colors.orange.shade600
                             : null,
@@ -429,84 +451,5 @@ class _QuotationListScreenState extends State<QuotationListScreen> {
         builder: (context) => QuotationDetailScreen(quotation: quotation),
       ),
     );
-  }
-
-  // Mock data สำหรับทดสอบ
-  List<Quotation> _getMockQuotations() {
-    return [
-      Quotation(
-        id: 1,
-        cartId: 1,
-        customerId: 1,
-        quotationNumber: 'QU-2025-000001',
-        status: QuotationStatus.pending,
-        totalAmount: 85000.00,
-        totalItems: 5.0,
-        originalTotalAmount: 95000.00,
-        notes: 'ขอลดราคาให้หน่อยค่ะ ซื้อเยอะ',
-        expiresAt: DateTime.now().add(const Duration(days: 7)),
-        createdAt: DateTime.now().subtract(const Duration(hours: 2)),
-        updatedAt: DateTime.now().subtract(const Duration(hours: 1)),
-        negotiations: [
-          QuotationNegotiation(
-            id: 1,
-            quotationId: 1,
-            negotiationType: NegotiationType.price,
-            fromRole: NegotiationRole.customer,
-            toRole: NegotiationRole.seller,
-            message: 'ขอลดราคาให้หน่อยค่ะ',
-            createdAt: DateTime.now().subtract(const Duration(hours: 1)),
-          ),
-        ],
-      ),
-      Quotation(
-        id: 2,
-        cartId: 2,
-        customerId: 1,
-        quotationNumber: 'QU-2025-000002',
-        status: QuotationStatus.negotiating,
-        totalAmount: 45000.00,
-        totalItems: 3.0,
-        originalTotalAmount: 50000.00,
-        notes: 'ต้องการสินค้าด่วน',
-        expiresAt: DateTime.now().add(const Duration(days: 2)),
-        createdAt: DateTime.now().subtract(const Duration(days: 1)),
-        updatedAt: DateTime.now().subtract(const Duration(hours: 3)),
-        negotiations: [
-          QuotationNegotiation(
-            id: 2,
-            quotationId: 2,
-            negotiationType: NegotiationType.both,
-            fromRole: NegotiationRole.customer,
-            toRole: NegotiationRole.seller,
-            message: 'ลดราคาและปรับจำนวนได้ไหม',
-            createdAt: DateTime.now().subtract(const Duration(hours: 4)),
-          ),
-          QuotationNegotiation(
-            id: 3,
-            quotationId: 2,
-            negotiationType: NegotiationType.price,
-            fromRole: NegotiationRole.seller,
-            toRole: NegotiationRole.customer,
-            message: 'ลดราคาได้นิดหน่อย แต่จำนวนคงเดิม',
-            createdAt: DateTime.now().subtract(const Duration(hours: 3)),
-          ),
-        ],
-      ),
-      Quotation(
-        id: 3,
-        cartId: 3,
-        customerId: 1,
-        quotationNumber: 'QU-2025-000003',
-        status: QuotationStatus.confirmed,
-        totalAmount: 75000.00,
-        totalItems: 4.0,
-        originalTotalAmount: 75000.00,
-        confirmedAt: DateTime.now().subtract(const Duration(hours: 6)),
-        createdAt: DateTime.now().subtract(const Duration(days: 2)),
-        updatedAt: DateTime.now().subtract(const Duration(hours: 6)),
-        negotiations: [],
-      ),
-    ];
   }
 }

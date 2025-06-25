@@ -3,12 +3,17 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:logger/logger.dart';
 
 import '../../data/models/cart_item_model.dart';
+import '../../data/models/quotation_model.dart';
+import '../../data/models/quotation_enums.dart';
 import '../../utils/number_formatter.dart';
+import '../../utils/service_locator.dart';
 import '../cubit/cart_cubit.dart';
 import '../cubit/cart_state.dart';
+import '../cubit/quotation_cubit.dart';
 import '../widgets/cart_item_widget_new.dart';
 import '../widgets/cart_summary_widget.dart';
 import '../widgets/empty_cart_widget.dart';
+import 'quotation_list_screen.dart';
 
 /// 🛒 หน้าจอตระกร้าสินค้า
 /// แสดงรายการสินค้าในตระกร้า พร้อมฟังก์ชันจัดการ
@@ -424,26 +429,101 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
-  /// สร้างคำสั่งซื้อ
-  void _createOrder(CartLoaded state) {
-    context.read<CartCubit>().createOrder();
-    _logger.d('Create order for cart with ${state.items.length} items');
-  }
-
   /// นำทางไปสร้างใบขอยืนยันราคา
-  void _navigateToQuotationCreation(CartLoaded state) {
-    // สร้างใบขอยืนยันราคาจากข้อมูลตะกร้า
-    // TODO: นำทางไปหน้าสร้างใบขอยืนยัน หรือสร้างทันทีแล้วไปหน้ารายการ
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('สร้างใบขอยืนยันราคาเรียบร้อย กำลังนำทางไปหน้ารายการ...'),
-      ),
-    );
+  void _navigateToQuotationCreation(CartLoaded state) async {
+    try {
+      // สร้างใบขอยืนยันราคาจากข้อมูลตะกร้า
+      _logger.d('Creating quotation with ${state.items.length} items');
 
-    // Simulate navigation to quotation list
-    Future.delayed(const Duration(seconds: 1), () {
-      // TODO: Navigator.pushNamed(context, '/quotations');
-    });
+      // ตรวจสอบข้อมูลก่อนสร้าง
+      if (state.items.isEmpty) {
+        _showErrorSnackBar('ไม่มีสินค้าในตะกร้า');
+        return;
+      }
+
+      if (state.cartId == null) {
+        _showErrorSnackBar('ไม่พบข้อมูลตระกร้า');
+        return;
+      }
+
+      // แสดง loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
+      );
+
+      // สร้างใบยืนยันราคา
+      final quotationCubit = sl<QuotationCubit>();
+
+      // สร้างข้อมูลใบยืนยันราคา
+      final quotationItems = state.items
+          .map(
+            (item) => QuotationItem(
+              id: 0, // จะถูกสร้างใหม่ในฐานข้อมูล
+              quotationId: 0, // จะถูกสร้างใหม่ในฐานข้อมูล
+              icCode: item.icCode,
+              barcode: item.barcode,
+              unitCode: item.unitCode,
+              originalQuantity: item.quantity,
+              originalUnitPrice: item.unitPrice ?? 0.0,
+              originalTotalPrice: item.totalPrice ?? 0.0,
+              requestedQuantity: item.quantity,
+              requestedUnitPrice: item.unitPrice ?? 0.0,
+              requestedTotalPrice: item.totalPrice ?? 0.0,
+              status: QuotationItemStatus.active,
+              createdAt: DateTime.now(),
+              updatedAt: DateTime.now(),
+            ),
+          )
+          .toList();
+
+      final quotation = Quotation(
+        id: 0, // จะถูกสร้างใหม่ในฐานข้อมูล
+        cartId: state.cartId!,
+        customerId: 1,
+        quotationNumber: '', // จะถูกสร้างใหม่
+        status: QuotationStatus.pending,
+        totalAmount: state.totalAmount,
+        totalItems: state.totalItems,
+        originalTotalAmount: state.totalAmount,
+        notes: 'สร้างจากตะกร้าสินค้า',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+
+      // สร้างใบยืนยันราคา
+      await quotationCubit.createQuotation(quotation, quotationItems);
+
+      // ล้างตะกร้าหลังจากสร้างใบยืนยันราคาสำเร็จ
+      await context.read<CartCubit>().clearCart(customerId: '1');
+
+      // ปิด loading dialog
+      if (mounted) Navigator.pop(context);
+
+      // นำทางไปหน้ารายการใบยืนยันราคา
+      if (mounted) {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => BlocProvider.value(
+              value: quotationCubit,
+              child: const QuotationListScreen(customerId: 1),
+            ),
+          ),
+        );
+      }
+
+      // แสดงข้อความสำเร็จ
+      _showSuccessSnackBar('สร้างใบยืนยันราคาสำเร็จ ตะกร้าได้ถูกล้างแล้ว');
+    } catch (e) {
+      // ปิด loading dialog ถ้ายังเปิดอยู่
+      if (mounted) Navigator.pop(context);
+
+      _logger.e('Error creating quotation: $e');
+      _showErrorSnackBar(
+        'เกิดข้อผิดพลาดในการสร้างใบยืนยันราคา: ${e.toString()}',
+      );
+    }
   }
 
   /// แสดง Success SnackBar

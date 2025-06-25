@@ -61,21 +61,21 @@ class ProductModel extends Equatable {
       itemType: json['item_type']?.toInt(),
       rowOrderRef: json['row_order_ref']?.toInt(),
       searchPriority: json['search_priority']?.toInt(),
-      price: json['price']?.toDouble(), // backward compatibility
+      price: _parseDouble(json['price']), // backward compatibility
       imgUrl: json['img_url']?.toString(),
       balanceQty: json['balance_qty']?.toInt(),
-      similarityScore: json['similarity_score']?.toDouble(), // 🆕 NEW fields
-      salePrice: json['sale_price']?.toDouble(),
+      similarityScore: _parseDouble(json['similarity_score']), // 🆕 NEW fields
+      salePrice: _parseDouble(json['sale_price']),
       premiumWord: json['premium_word']?.toString(),
-      discountPrice: json['discount_price']?.toDouble(),
-      discountPercent: json['discount_percent']?.toDouble(),
+      discountPrice: _parseDouble(json['discount_price']),
+      discountPercent: _parseDouble(json['discount_percent']),
       discountWord: json['discount_word']?.toString(),
-      finalPrice: json['final_price']?.toDouble(),
-      soldQty: json['sold_qty']?.toDouble(),
+      finalPrice: _parseDouble(json['final_price']),
+      soldQty: _parseDouble(json['sold_qty']),
       multiPacking: json['multi_packing']?.toInt(),
       multiPackingName: json['multi_packing_name']?.toString(),
       barcodes: json['barcodes']?.toString(),
-      qtyAvailable: json['qty_available']?.toDouble(), // 🔥 NEWEST field
+      qtyAvailable: _parseDouble(json['qty_available']), // 🔥 NEWEST field
     );
   }
   Map<String, dynamic> toJson() {
@@ -195,5 +195,14 @@ class ProductModel extends Equatable {
 
   bool get hasMultiplePacking {
     return multiPacking == 1 && packingOptions.isNotEmpty;
+  }
+
+  /// Helper method to safely parse dynamic values to double
+  static double? _parseDouble(dynamic value) {
+    if (value == null) return null;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is String) return double.tryParse(value);
+    return null;
   }
 }

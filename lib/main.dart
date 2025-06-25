@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'presentation/cubit/cart_cubit.dart';
 import 'presentation/cubit/product_search_cubit.dart';
+import 'presentation/cubit/quotation_cubit.dart';
 import 'presentation/screens/product_search_screen.dart';
 import 'utils/service_locator.dart' as di;
 
@@ -21,6 +22,7 @@ class SmlMarketApp extends StatelessWidget {
       providers: [
         BlocProvider(create: (_) => di.sl<ProductSearchCubit>()),
         BlocProvider(create: (_) => di.sl<CartCubit>()),
+        BlocProvider(create: (_) => di.sl<QuotationCubit>()),
       ],
       child: MaterialApp(
         title: 'SML Market',

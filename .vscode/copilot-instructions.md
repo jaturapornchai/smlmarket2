@@ -36,6 +36,8 @@ This guide provides standards and rules for developing Flutter applications with
 9. Format numbers with comma separator for amounts and quantities / ใส่ comma คั่นหลักพันสำหรับจำนวนเงินและปริมาณ
 10. Display whole numbers without .00 decimal / แสดงจำนวนเต็มโดยไม่ต้องมี .00
 11. **Prevent GitHub Copilot from editing files in the .vscode folder** / ห้ามให้ GitHub Copilot แก้ไขไฟล์ในโฟลเดอร์ .vscode
+ถ้าต้องสร้างไฟล์ทดสอบใหม่ ให้สร้างในโฟลเดอร์ /test เท่านั้น
+ใช้ json_serializable ในการจัดการ JSON serialization
 
 ### Prohibited Practices / สิ่งที่ห้ามทำ
 

@@ -1,7 +1,51 @@
 import 'package:equatable/equatable.dart';
+import 'package:json_annotation/json_annotation.dart';
 
 import 'cart_item_model.dart';
 import 'order_model.dart';
+
+part 'cart_model.g.dart';
+
+/// Custom converter สำหรับ CartStatus
+class CartStatusConverter implements JsonConverter<CartStatus, String> {
+  const CartStatusConverter();
+
+  @override
+  CartStatus fromJson(String value) {
+    switch (value) {
+      case 'active':
+        return CartStatus.active;
+      case 'completed':
+        return CartStatus.completed;
+      case 'cancelled':
+        return CartStatus.cancelled;
+      default:
+        return CartStatus.active;
+    }
+  }
+
+  @override
+  String toJson(CartStatus value) => value.name;
+}
+
+/// Custom converter สำหรับ double ที่อาจมาเป็น string หรือ number
+class DoubleStringConverter implements JsonConverter<double, Object?> {
+  const DoubleStringConverter();
+
+  @override
+  double fromJson(Object? value) {
+    if (value == null) return 0.0;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is String) {
+      return double.tryParse(value) ?? 0.0;
+    }
+    return 0.0;
+  }
+
+  @override
+  Object toJson(double value) => value;
+}
 
 /// สถานะของตระกร้าสินค้า
 enum CartStatus {
@@ -11,13 +55,22 @@ enum CartStatus {
 }
 
 /// โมเดลตระกร้าสินค้า - เก็บข้อมูลตระกร้าหลักของผู้ใช้
+@JsonSerializable()
 class CartModel extends Equatable {
   final int? id; // รหัสตระกร้า
+  @JsonKey(name: 'customer_id')
   final int? customerId; // รหัสลูกค้า - ใช้ customer_id แทน user_id
+  @CartStatusConverter()
   final CartStatus status; // สถานะตระกร้า
+  @JsonKey(name: 'total_amount')
+  @DoubleStringConverter()
   final double totalAmount; // จำนวนเงินรวม
+  @JsonKey(name: 'total_items')
+  @DoubleStringConverter()
   final double totalItems; // จำนวนสินค้าทั้งหมด
+  @JsonKey(name: 'created_at')
   final DateTime? createdAt; // วันที่สร้าง
+  @JsonKey(name: 'updated_at')
   final DateTime? updatedAt; // วันที่แก้ไขล่าสุด
 
   const CartModel({
@@ -30,54 +83,10 @@ class CartModel extends Equatable {
     this.updatedAt,
   });
 
-  factory CartModel.fromJson(Map<String, dynamic> json) {
-    return CartModel(
-      id: json['id']?.toInt(),
-      customerId: json['customer_id']?.toInt(),
-      status: _parseStatus(json['status']),
-      totalAmount: _parseDouble(json['total_amount']) ?? 0.0,
-      totalItems: json['total_items']?.toDouble() ?? 0.0,
-      createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'])
-          : null,
-      updatedAt: json['updated_at'] != null
-          ? DateTime.parse(json['updated_at'])
-          : null,
-    );
-  }
+  factory CartModel.fromJson(Map<String, dynamic> json) =>
+      _$CartModelFromJson(json);
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'customer_id': customerId,
-      'status': status.name,
-      'total_amount': totalAmount,
-      'total_items': totalItems,
-      'created_at': createdAt?.toIso8601String(),
-      'updated_at': updatedAt?.toIso8601String(),
-    };
-  }
-
-  static CartStatus _parseStatus(String? status) {
-    switch (status) {
-      case 'active':
-        return CartStatus.active;
-      case 'completed':
-        return CartStatus.completed;
-      case 'cancelled':
-        return CartStatus.cancelled;
-      default:
-        return CartStatus.active;
-    }
-  }
-
-  static double? _parseDouble(dynamic value) {
-    if (value == null) return null;
-    if (value is double) return value;
-    if (value is int) return value.toDouble();
-    if (value is String) return double.tryParse(value);
-    return null;
-  }
+  Map<String, dynamic> toJson() => _$CartModelToJson(this);
 
   CartModel copyWith({
     int? id,
@@ -93,7 +102,7 @@ class CartModel extends Equatable {
       customerId: customerId ?? this.customerId,
       status: status ?? this.status,
       totalAmount: totalAmount ?? this.totalAmount,
-      totalItems: totalItems?.toDouble() ?? this.totalItems,
+      totalItems: totalItems ?? this.totalItems,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

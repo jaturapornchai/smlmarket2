@@ -1,4 +1,7 @@
+import 'package:json_annotation/json_annotation.dart';
+
 /// สถานะใบขอยืนยันราคาและขอยืนยันจำนวน
+@JsonEnum(valueField: 'value')
 enum QuotationStatus {
   pending('pending', 'รอการยืนยัน'),
   confirmed('confirmed', 'ยืนยันแล้ว'),
@@ -20,6 +23,7 @@ enum QuotationStatus {
 }
 
 /// สถานะรายการสินค้าในใบขอยืนยัน
+@JsonEnum(valueField: 'value')
 enum QuotationItemStatus {
   active('active', 'ใช้งาน'),
   cancelled('cancelled', 'ยกเลิก');
@@ -38,6 +42,7 @@ enum QuotationItemStatus {
 }
 
 /// ประเภทการต่อรอง
+@JsonEnum(valueField: 'value')
 enum NegotiationType {
   price('price', 'ราคา'),
   quantity('quantity', 'จำนวน'),
@@ -58,6 +63,7 @@ enum NegotiationType {
 }
 
 /// สถานะการต่อรอง
+@JsonEnum(valueField: 'value')
 enum NegotiationStatus {
   pending('pending', 'รอการตอบกลับ'),
   accepted('accepted', 'ยอมรับ'),
@@ -78,6 +84,7 @@ enum NegotiationStatus {
 }
 
 /// บทบาทในการต่อรอง
+@JsonEnum(valueField: 'value')
 enum NegotiationRole {
   customer('customer', 'ลูกค้า'),
   seller('seller', 'ผู้ขาย');

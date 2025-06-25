@@ -1,18 +1,70 @@
 import 'package:equatable/equatable.dart';
+import 'package:json_annotation/json_annotation.dart';
 
 import 'order_item_model.dart';
 
+part 'cart_item_model.g.dart';
+
+/// Custom converter for numeric values that might come as strings
+class NullableNumericConverter implements JsonConverter<double?, Object?> {
+  const NullableNumericConverter();
+
+  @override
+  double? fromJson(Object? json) {
+    if (json == null) return null;
+    if (json is double) return json;
+    if (json is int) return json.toDouble();
+    if (json is String) {
+      return double.tryParse(json);
+    }
+    return null;
+  }
+
+  @override
+  Object? toJson(double? object) => object;
+}
+
+/// Custom converter for non-nullable numeric values
+class NumericConverter implements JsonConverter<double, Object?> {
+  const NumericConverter();
+
+  @override
+  double fromJson(Object? json) {
+    if (json == null) return 0.0;
+    if (json is double) return json;
+    if (json is int) return json.toDouble();
+    if (json is String) {
+      return double.tryParse(json) ?? 0.0;
+    }
+    return 0.0;
+  }
+
+  @override
+  Object toJson(double object) => object;
+}
+
 /// โมเดลสินค้าในตระกร้า - เก็บข้อมูลสินค้าแต่ละชิ้นในตระกร้า
+@JsonSerializable()
 class CartItemModel extends Equatable {
   final int? id; // รหัสรายการสินค้าในตระกร้า
+  @JsonKey(name: 'cart_id')
   final int cartId; // รหัสตระกร้า (FK)
+  @JsonKey(name: 'ic_code')
   final String icCode; // รหัสสินค้า (FK) - ใช้ ic_code แทน product_id
   final String? barcode; // บาร์โค้ดสินค้า
+  @JsonKey(name: 'unit_code')
   final String? unitCode; // รหัสหน่วยสินค้า
+  @NumericConverter()
   final double quantity; // จำนวนสินค้า
+  @JsonKey(name: 'unit_price')
+  @NullableNumericConverter()
   final double? unitPrice; // ราคาต่อหน่วย
+  @JsonKey(name: 'total_price')
+  @NullableNumericConverter()
   final double? totalPrice; // ราคารวม
+  @JsonKey(name: 'created_at')
   final DateTime? createdAt; // วันที่เพิ่มเข้าตระกร้า
+  @JsonKey(name: 'updated_at')
   final DateTime? updatedAt; // วันที่แก้ไขล่าสุด
 
   const CartItemModel({
@@ -28,54 +80,10 @@ class CartItemModel extends Equatable {
     this.updatedAt,
   });
 
-  factory CartItemModel.fromJson(Map<String, dynamic> json) {
-    return CartItemModel(
-      id: json['id']?.toInt(),
-      cartId: json['cart_id']?.toInt() ?? 0,
-      icCode: json['ic_code']?.toString() ?? '',
-      barcode: json['barcode']?.toString(),
-      unitCode: json['unit_code']?.toString(),
-      quantity: _parseDouble(json['quantity']) ?? 1.0,
-      unitPrice: _parseDouble(json['unit_price']),
-      totalPrice: _parseDouble(json['total_price']),
-      createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'])
-          : null,
-      updatedAt: json['updated_at'] != null
-          ? DateTime.parse(json['updated_at'])
-          : null,
-    );
-  }
+  factory CartItemModel.fromJson(Map<String, dynamic> json) =>
+      _$CartItemModelFromJson(json);
 
-  /// Helper method to safely parse double from various types
-  static double? _parseDouble(dynamic value) {
-    if (value == null) return null;
-    if (value is double) return value;
-    if (value is int) return value.toDouble();
-    if (value is String) {
-      try {
-        return double.parse(value);
-      } catch (e) {
-        return null;
-      }
-    }
-    return null;
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'cart_id': cartId,
-      'ic_code': icCode,
-      'barcode': barcode,
-      'unit_code': unitCode,
-      'quantity': quantity,
-      'unit_price': unitPrice,
-      'total_price': totalPrice,
-      'created_at': createdAt?.toIso8601String(),
-      'updated_at': updatedAt?.toIso8601String(),
-    };
-  }
+  Map<String, dynamic> toJson() => _$CartItemModelToJson(this);
 
   CartItemModel copyWith({
     int? id,

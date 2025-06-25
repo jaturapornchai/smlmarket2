@@ -173,7 +173,8 @@ class CartRemoteDataSource implements CartDataSource {
       if (response.data['success'] == true &&
           response.data['data'] != null &&
           response.data['data'].isNotEmpty) {
-        return (response.data['data'][0]['qty_available'] ?? 0.0).toDouble();
+        final dynamic rawQty = response.data['data'][0]['qty_available'];
+        return _parseDouble(rawQty) ?? 0.0;
       }
 
       return 0.0;
@@ -425,5 +426,14 @@ class CartRemoteDataSource implements CartDataSource {
     } catch (e) {
       logger.e('⛔ Error updating cart totals', error: e);
     }
+  }
+
+  /// Helper method to safely parse dynamic values to double
+  static double? _parseDouble(dynamic value) {
+    if (value == null) return null;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is String) return double.tryParse(value);
+    return null;
   }
 }

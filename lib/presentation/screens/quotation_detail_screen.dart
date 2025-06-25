@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../data/models/quotation_model.dart';
 import '../../data/models/quotation_enums.dart';
 import '../../utils/number_formatter.dart';
+import '../../utils/thai_date_formatter.dart';
+import '../../utils/service_locator.dart';
+import '../cubit/quotation_cubit.dart';
+import '../cubit/quotation_state.dart';
 import 'negotiation_screen.dart';
 
 /// หน้าจอรายละเอียดใบขอยืนยันราคาและขอยืนยันจำนวน
@@ -15,115 +19,174 @@ class QuotationDetailScreen extends StatefulWidget {
   State<QuotationDetailScreen> createState() => _QuotationDetailScreenState();
 }
 
-class _QuotationDetailScreenState extends State<QuotationDetailScreen>
-    with TickerProviderStateMixin {
-  late TabController _tabController;
+class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
+  late QuotationCubit _quotationCubit;
   late Quotation currentQuotation;
   bool isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
     currentQuotation = widget.quotation;
+    _quotationCubit = sl<QuotationCubit>();
+    _loadQuotationDetails();
+  }
+
+  Future<void> _loadQuotationDetails() async {
+    print(
+      '🔍 [DETAIL_SCREEN] Loading quotation details for ID: ${currentQuotation.id}',
+    );
+    setState(() {
+      isLoading = true;
+    });
+    await _quotationCubit.loadQuotationDetails(currentQuotation.id);
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
+    _quotationCubit.close();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(currentQuotation.quotationNumber),
-        backgroundColor: Colors.blue.shade600,
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _refreshQuotation,
-          ),
-          PopupMenuButton<String>(
-            onSelected: _handleMenuAction,
-            itemBuilder: (context) => [
-              if (currentQuotation.status == QuotationStatus.pending ||
-                  currentQuotation.status == QuotationStatus.negotiating)
-                const PopupMenuItem(
-                  value: 'negotiate',
-                  child: Row(
-                    children: [
-                      Icon(Icons.chat_bubble_outline),
-                      SizedBox(width: 8),
-                      Text('ต่อรองราคา'),
-                    ],
-                  ),
-                ),
-              if (currentQuotation.status == QuotationStatus.pending ||
-                  currentQuotation.status == QuotationStatus.negotiating)
-                const PopupMenuItem(
-                  value: 'cancel',
-                  child: Row(
-                    children: [
-                      Icon(Icons.cancel_outlined, color: Colors.red),
-                      SizedBox(width: 8),
-                      Text('ยกเลิก', style: TextStyle(color: Colors.red)),
-                    ],
-                  ),
-                ),
+    return BlocBuilder<QuotationCubit, QuotationState>(
+      bloc: _quotationCubit,
+      builder: (context, state) {
+        // Update currentQuotation if we have new data
+        if (state is QuotationDetailLoaded) {
+          print(
+            '✅ [DETAIL_SCREEN] QuotationDetailLoaded with ${state.quotation.items.length} items',
+          );
+          currentQuotation = state.quotation;
+          isLoading = false;
+        } else if (state is QuotationLoading) {
+          print('⏳ [DETAIL_SCREEN] QuotationLoading');
+          isLoading = true;
+        } else if (state is QuotationError) {
+          print('❌ [DETAIL_SCREEN] QuotationError: ${state.message}');
+          isLoading = false;
+          // Show error snackbar
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: Colors.red,
+              ),
+            );
+          });
+        }
+
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(currentQuotation.quotationNumber),
+            backgroundColor: Colors.blue.shade600,
+            foregroundColor: Colors.white,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.refresh),
+                onPressed: _refreshQuotation,
+              ),
+              PopupMenuButton<String>(
+                onSelected: _handleMenuAction,
+                itemBuilder: (context) => [
+                  if (currentQuotation.status == QuotationStatus.pending ||
+                      currentQuotation.status == QuotationStatus.negotiating)
+                    const PopupMenuItem(
+                      value: 'negotiate',
+                      child: Row(
+                        children: [
+                          Icon(Icons.chat_bubble_outline),
+                          SizedBox(width: 8),
+                          Text('ต่อรองราคา'),
+                        ],
+                      ),
+                    ),
+                  if (currentQuotation.status == QuotationStatus.pending ||
+                      currentQuotation.status == QuotationStatus.negotiating)
+                    const PopupMenuItem(
+                      value: 'cancel',
+                      child: Row(
+                        children: [
+                          Icon(Icons.cancel_outlined, color: Colors.red),
+                          SizedBox(width: 8),
+                          Text('ยกเลิก', style: TextStyle(color: Colors.red)),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
             ],
           ),
-        ],
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          indicatorColor: Colors.white,
-          tabs: const [
-            Tab(icon: Icon(Icons.info_outline), text: 'ข้อมูลใบ'),
-            Tab(icon: Icon(Icons.shopping_cart), text: 'รายการสินค้า'),
-            Tab(icon: Icon(Icons.chat_bubble), text: 'ประวัติการต่อรอง'),
-          ],
-        ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildQuotationInfoTab(),
-          _buildItemsTab(),
-          _buildNegotiationHistoryTab(),
-        ],
-      ),
-      bottomNavigationBar: _buildBottomActions(),
+          body: isLoading
+              ? const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(height: 16),
+                      Text('กำลังโหลดรายละเอียด...'),
+                    ],
+                  ),
+                )
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // ข้อมูลใบขอยืนยัน
+                      _buildQuotationInfoSection(),
+                      const SizedBox(height: 24),
+
+                      // รายการสินค้า
+                      _buildItemsSection(),
+                      const SizedBox(height: 24),
+
+                      // ประวัติการต่อรอง
+                      _buildNegotiationHistorySection(),
+                    ],
+                  ),
+                ),
+          bottomNavigationBar: _buildBottomActions(),
+        );
+      },
     );
   }
 
-  Widget _buildQuotationInfoTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // สถานะใบขอยืนยัน
-          _buildStatusCard(),
-          const SizedBox(height: 16),
+  Widget _buildQuotationInfoSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Section Header
+        Row(
+          children: [
+            Icon(Icons.info_outline, color: Colors.blue.shade600),
+            const SizedBox(width: 8),
+            const Text(
+              'ข้อมูลใบขอยืนยัน',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
 
-          // ข้อมูลทั่วไป
-          _buildInfoCard(),
-          const SizedBox(height: 16),
+        // สถานะใบขอยืนยัน
+        _buildStatusCard(),
+        const SizedBox(height: 16),
 
-          // สรุปราคา
-          _buildPriceSummaryCard(),
-          const SizedBox(height: 16),
+        // ข้อมูลทั่วไป
+        _buildInfoCard(),
+        const SizedBox(height: 16),
 
-          // หมายเหตุ
-          if (currentQuotation.notes != null ||
-              currentQuotation.sellerNotes != null)
-            _buildNotesCard(),
-        ],
-      ),
+        // สรุปราคา
+        _buildPriceSummaryCard(),
+        const SizedBox(height: 16),
+
+        // หมายเหตุ
+        if (currentQuotation.notes != null ||
+            currentQuotation.sellerNotes != null)
+          _buildNotesCard(),
+      ],
     );
   }
 
@@ -161,9 +224,9 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen>
                         ),
                       ),
                       Text(
-                        DateFormat(
-                          'dd/MM/yyyy HH:mm',
-                        ).format(currentQuotation.expiresAt!),
+                        ThaiDateFormatter.formatFullThaiWithTimeAndWeekday(
+                          currentQuotation.expiresAt!,
+                        ),
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
@@ -203,25 +266,29 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen>
             _buildInfoRow('เลขที่ใบขอยืนยัน', currentQuotation.quotationNumber),
             _buildInfoRow(
               'วันที่สร้าง',
-              DateFormat('dd/MM/yyyy HH:mm').format(currentQuotation.createdAt),
+              ThaiDateFormatter.formatFullThaiWithTimeAndWeekday(
+                currentQuotation.createdAt,
+              ),
             ),
             _buildInfoRow(
               'อัปเดตล่าสุด',
-              DateFormat('dd/MM/yyyy HH:mm').format(currentQuotation.updatedAt),
+              ThaiDateFormatter.formatFullThaiWithTimeAndWeekday(
+                currentQuotation.updatedAt,
+              ),
             ),
             if (currentQuotation.confirmedAt != null)
               _buildInfoRow(
                 'วันที่ยืนยัน',
-                DateFormat(
-                  'dd/MM/yyyy HH:mm',
-                ).format(currentQuotation.confirmedAt!),
+                ThaiDateFormatter.formatFullThaiWithTimeAndWeekday(
+                  currentQuotation.confirmedAt!,
+                ),
               ),
             if (currentQuotation.cancelledAt != null)
               _buildInfoRow(
                 'วันที่ยกเลิก',
-                DateFormat(
-                  'dd/MM/yyyy HH:mm',
-                ).format(currentQuotation.cancelledAt!),
+                ThaiDateFormatter.formatFullThaiWithTimeAndWeekday(
+                  currentQuotation.cancelledAt!,
+                ),
               ),
           ],
         ),
@@ -346,20 +413,52 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen>
     );
   }
 
-  Widget _buildItemsTab() {
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: currentQuotation.items.length,
-      itemBuilder: (context, index) {
-        final item = currentQuotation.items[index];
-        return _buildItemCard(item);
-      },
+  Widget _buildItemsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Section Header
+        Row(
+          children: [
+            Icon(Icons.shopping_cart, color: Colors.blue.shade600),
+            const SizedBox(width: 8),
+            const Text(
+              'รายการสินค้า',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const Spacer(),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade100,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                '${currentQuotation.items.length} รายการ',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.blue.shade700,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        // Items List
+        ...currentQuotation.items.map(
+          (item) => Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: _buildItemCard(item),
+          ),
+        ),
+      ],
     );
   }
 
   Widget _buildItemCard(QuotationItem item) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 16),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -532,44 +631,82 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen>
     );
   }
 
-  Widget _buildNegotiationHistoryTab() {
-    if (currentQuotation.negotiations.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+  Widget _buildNegotiationHistorySection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Section Header
+        Row(
           children: [
-            Icon(
-              Icons.chat_bubble_outline,
-              size: 80,
-              color: Colors.grey.shade400,
+            Icon(Icons.chat_bubble, color: Colors.blue.shade600),
+            const SizedBox(width: 8),
+            const Text(
+              'ประวัติการต่อรอง',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 16),
-            Text(
-              'ยังไม่มีประวัติการต่อรอง',
-              style: TextStyle(
-                fontSize: 18,
-                color: Colors.grey.shade600,
-                fontWeight: FontWeight.w500,
+            const Spacer(),
+            if (currentQuotation.negotiations.isNotEmpty)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade100,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '${currentQuotation.negotiations.length} ครั้ง',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.blue.shade700,
+                  ),
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'เมื่อมีการต่อรองราคาจะแสดงประวัติที่นี่',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey.shade500),
-            ),
           ],
         ),
-      );
-    }
+        const SizedBox(height: 16),
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: currentQuotation.negotiations.length,
-      itemBuilder: (context, index) {
-        final negotiation = currentQuotation.negotiations[index];
-        return _buildNegotiationCard(negotiation);
-      },
+        // Negotiation History Content
+        if (currentQuotation.negotiations.isEmpty)
+          _buildEmptyNegotiationHistory()
+        else
+          ...currentQuotation.negotiations.map(
+            (negotiation) => Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: _buildNegotiationCard(negotiation),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildEmptyNegotiationHistory() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        children: [
+          Icon(
+            Icons.chat_bubble_outline,
+            size: 60,
+            color: Colors.grey.shade400,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'ยังไม่มีประวัติการต่อรอง',
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.grey.shade600,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'เมื่อมีการต่อรองราคาจะแสดงประวัติที่นี่',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.grey.shade500),
+          ),
+        ],
+      ),
     );
   }
 
@@ -620,9 +757,9 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen>
                                 ),
                               ),
                               Text(
-                                DateFormat(
-                                  'dd/MM/yyyy HH:mm',
-                                ).format(negotiation.createdAt),
+                                ThaiDateFormatter.formatFullThaiWithTimeAndWeekday(
+                                  negotiation.createdAt,
+                                ),
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: Colors.grey.shade600,
@@ -714,7 +851,7 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen>
                     if (negotiation.respondedAt != null) ...[
                       const SizedBox(height: 8),
                       Text(
-                        'ตอบกลับเมื่อ: ${DateFormat('dd/MM/yyyy HH:mm').format(negotiation.respondedAt!)}',
+                        'ตอบกลับเมื่อ: ${ThaiDateFormatter.formatFullThaiWithTimeAndWeekday(negotiation.respondedAt!)}',
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.grey.shade600,
@@ -995,26 +1132,7 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen>
 
   // Action methods
   void _refreshQuotation() async {
-    setState(() {
-      isLoading = true;
-    });
-
-    try {
-      // TODO: เรียก API เพื่อโหลดข้อมูลใหม่
-      await Future.delayed(const Duration(milliseconds: 500));
-
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('รีเฟรชข้อมูลเรียบร้อย')));
-    } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('เกิดข้อผิดพลาด: $e')));
-    } finally {
-      setState(() {
-        isLoading = false;
-      });
-    }
+    await _loadQuotationDetails();
   }
 
   void _handleMenuAction(String action) {

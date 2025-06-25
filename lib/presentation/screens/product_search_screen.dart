@@ -7,11 +7,14 @@ import '../cubit/cart_cubit.dart';
 import '../cubit/cart_state.dart';
 import '../cubit/product_search_cubit.dart';
 import '../cubit/product_search_state.dart';
+import '../cubit/quotation_cubit.dart';
+import '../cubit/quotation_state.dart';
 import '../widgets/product_grid.dart';
 import '../widgets/search_bar_widget.dart';
 import 'cart_screen.dart';
 import 'login_screen.dart';
 import 'product_detail_screen.dart';
+import 'quotation_list_screen.dart';
 
 class ProductSearchScreen extends StatefulWidget {
   const ProductSearchScreen({super.key});
@@ -29,6 +32,8 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         context.read<CartCubit>().loadCart(customerId: '1');
+        // โหลดข้อมูลใบยืนยันราคา
+        context.read<QuotationCubit>().loadQuotations(1);
       }
     });
   }
@@ -69,6 +74,14 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
     ).push(MaterialPageRoute(builder: (context) => const CartScreen()));
   }
 
+  void _onQuotationTap() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const QuotationListScreen(customerId: 1),
+      ),
+    );
+  }
+
   void _onLoginTap() {
     Navigator.of(
       context,
@@ -104,6 +117,46 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
                 itemCount > 99
                     ? '99+'
                     : NumberFormatter.formatQuantity(itemCount),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  /// สร้าง icon ใบยืนยันราคาพร้อมแสดงจำนวน
+  Widget _buildQuotationIcon(int quotationCount) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        const Icon(Icons.description_outlined, size: 24),
+        if (quotationCount > 0)
+          Positioned(
+            right: -6,
+            top: -6,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: Colors.orange,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.white, width: 2),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.2),
+                    blurRadius: 2,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
+              ),
+              constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
+              child: Text(
+                quotationCount > 99 ? '99+' : quotationCount.toString(),
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 10,
@@ -238,7 +291,7 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
               ),
               const SizedBox(height: 16),
               const Text(
-                'เริ่มค้นหาสินค้า',
+                'เริ่มค้นหาสินค้า - ระบบพร้อมใช้งาน',
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w500,
@@ -270,6 +323,21 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
         elevation: 1,
         surfaceTintColor: Colors.white,
         actions: [
+          // Quotation Button with Badge
+          BlocBuilder<QuotationCubit, QuotationState>(
+            builder: (context, quotationState) {
+              int quotationCount = 0;
+              if (quotationState is QuotationLoaded) {
+                quotationCount = quotationState.quotations.length;
+              }
+
+              return IconButton(
+                onPressed: _onQuotationTap,
+                icon: _buildQuotationIcon(quotationCount),
+                tooltip: 'ใบยืนยันราคา',
+              );
+            },
+          ),
           // Cart Button with Badge
           BlocBuilder<CartCubit, CartState>(
             builder: (context, cartState) {

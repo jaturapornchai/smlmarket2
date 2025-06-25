@@ -1,15 +1,25 @@
 import 'package:equatable/equatable.dart';
+import 'package:json_annotation/json_annotation.dart';
+
+part 'order_item_model.g.dart';
 
 /// โมเดลสินค้าในคำสั่งซื้อ - เก็บข้อมูลสินค้าแต่ละชิ้นในคำสั่งซื้อ
+@JsonSerializable()
 class OrderItemModel extends Equatable {
   final int? id; // รหัสรายการสินค้าในคำสั่งซื้อ
+  @JsonKey(name: 'order_id')
   final int orderId; // รหัสคำสั่งซื้อ (FK)
+  @JsonKey(name: 'ic_code')
   final String icCode; // รหัสสินค้า (FK) - ใช้ ic_code แทน product_id
+  @JsonKey(name: 'product_name')
   final String productName; // ชื่อสินค้า (snapshot)
   final String? barcode; // บาร์โค้ดสินค้า (snapshot)
+  @JsonKey(name: 'unit_code')
   final String? unitCode; // รหัสหน่วยสินค้า (snapshot)
   final double quantity; // จำนวนสินค้า
+  @JsonKey(name: 'unit_price')
   final double unitPrice; // ราคาต่อหน่วย (snapshot)
+  @JsonKey(name: 'total_price')
   final double totalPrice; // ราคารวม
 
   const OrderItemModel({
@@ -24,33 +34,10 @@ class OrderItemModel extends Equatable {
     required this.totalPrice,
   });
 
-  factory OrderItemModel.fromJson(Map<String, dynamic> json) {
-    return OrderItemModel(
-      id: json['id']?.toInt(),
-      orderId: json['order_id']?.toInt() ?? 0,
-      icCode: json['ic_code']?.toString() ?? '',
-      productName: json['product_name']?.toString() ?? '',
-      barcode: json['barcode']?.toString(),
-      unitCode: json['unit_code']?.toString(),
-      quantity: json['quantity']?.toDouble() ?? 1.0,
-      unitPrice: json['unit_price']?.toDouble() ?? 0.0,
-      totalPrice: json['total_price']?.toDouble() ?? 0.0,
-    );
-  }
+  factory OrderItemModel.fromJson(Map<String, dynamic> json) =>
+      _$OrderItemModelFromJson(json);
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'order_id': orderId,
-      'ic_code': icCode,
-      'product_name': productName,
-      'barcode': barcode,
-      'unit_code': unitCode,
-      'quantity': quantity,
-      'unit_price': unitPrice,
-      'total_price': totalPrice,
-    };
-  }
+  Map<String, dynamic> toJson() => _$OrderItemModelToJson(this);
 
   OrderItemModel copyWith({
     int? id,

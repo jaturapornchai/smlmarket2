@@ -1,6 +1,10 @@
 import 'package:equatable/equatable.dart';
+import 'package:json_annotation/json_annotation.dart';
 import 'product_model.dart';
 
+part 'search_response_model.g.dart';
+
+@JsonSerializable()
 class SearchResponseModel extends Equatable {
   final bool success;
   final SearchDataModel? data;
@@ -8,47 +12,28 @@ class SearchResponseModel extends Equatable {
 
   const SearchResponseModel({required this.success, this.data, this.message});
 
-  factory SearchResponseModel.fromJson(Map<String, dynamic> json) {
-    return SearchResponseModel(
-      success: json['success'] ?? false,
-      data: json['data'] != null
-          ? SearchDataModel.fromJson(json['data'])
-          : null,
-      message: json['message']?.toString(),
-    );
-  }
+  factory SearchResponseModel.fromJson(Map<String, dynamic> json) =>
+      _$SearchResponseModelFromJson(json);
 
-  Map<String, dynamic> toJson() {
-    return {'success': success, 'data': data?.toJson(), 'message': message};
-  }
+  Map<String, dynamic> toJson() => _$SearchResponseModelToJson(this);
 
   @override
   List<Object?> get props => [success, data, message];
 }
 
+@JsonSerializable()
 class SearchDataModel extends Equatable {
+  @JsonKey(name: 'data', defaultValue: [])
   final List<ProductModel> products;
+  @JsonKey(name: 'total_count', defaultValue: 0)
   final int total;
 
   const SearchDataModel({required this.products, required this.total});
-  factory SearchDataModel.fromJson(Map<String, dynamic> json) {
-    final List<dynamic> dataList = json['data'] ?? [];
-    final List<ProductModel> products = dataList
-        .map((item) => ProductModel.fromJson(item as Map<String, dynamic>))
-        .toList();
 
-    return SearchDataModel(
-      products: products,
-      total: json['total'] ?? json['total_count'] ?? products.length,
-    );
-  }
+  factory SearchDataModel.fromJson(Map<String, dynamic> json) =>
+      _$SearchDataModelFromJson(json);
 
-  Map<String, dynamic> toJson() {
-    return {
-      'data': products.map((product) => product.toJson()).toList(),
-      'total': total,
-    };
-  }
+  Map<String, dynamic> toJson() => _$SearchDataModelToJson(this);
 
   @override
   List<Object?> get props => [products, total];
