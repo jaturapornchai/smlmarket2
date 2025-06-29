@@ -5,8 +5,10 @@ import '../../data/models/quotation_enums.dart';
 import '../../utils/number_formatter.dart';
 import '../../utils/thai_date_formatter.dart';
 import '../../utils/service_locator.dart';
+import '../cubit/negotiation_cubit.dart';
 import '../cubit/quotation_cubit.dart';
 import '../cubit/quotation_state.dart';
+import '../widgets/app_navigation_bar.dart';
 import 'negotiation_screen.dart';
 
 /// หน้าจอรายละเอียดใบขอยืนยันราคาและขอยืนยันจำนวน
@@ -78,75 +80,85 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
         }
 
         return Scaffold(
-          appBar: AppBar(
-            title: Text(currentQuotation.quotationNumber),
-            backgroundColor: Colors.blue.shade600,
-            foregroundColor: Colors.white,
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.refresh),
-                onPressed: _refreshQuotation,
-              ),
-              PopupMenuButton<String>(
-                onSelected: _handleMenuAction,
-                itemBuilder: (context) => [
-                  if (currentQuotation.status == QuotationStatus.pending ||
-                      currentQuotation.status == QuotationStatus.negotiating)
-                    const PopupMenuItem(
-                      value: 'negotiate',
-                      child: Row(
-                        children: [
-                          Icon(Icons.chat_bubble_outline),
-                          SizedBox(width: 8),
-                          Text('ต่อรองราคา'),
-                        ],
-                      ),
-                    ),
-                  if (currentQuotation.status == QuotationStatus.pending ||
-                      currentQuotation.status == QuotationStatus.negotiating)
-                    const PopupMenuItem(
-                      value: 'cancel',
-                      child: Row(
-                        children: [
-                          Icon(Icons.cancel_outlined, color: Colors.red),
-                          SizedBox(width: 8),
-                          Text('ยกเลิก', style: TextStyle(color: Colors.red)),
-                        ],
-                      ),
-                    ),
+          backgroundColor: Colors.grey[50],
+          body: Column(
+            children: [
+              AppNavigationBar(
+                title: currentQuotation.quotationNumber,
+                additionalActions: [
+                  IconButton(
+                    icon: const Icon(Icons.refresh),
+                    onPressed: _refreshQuotation,
+                  ),
+                  PopupMenuButton<String>(
+                    onSelected: _handleMenuAction,
+                    itemBuilder: (context) => [
+                      if (currentQuotation.status == QuotationStatus.pending ||
+                          currentQuotation.status ==
+                              QuotationStatus.negotiating)
+                        const PopupMenuItem(
+                          value: 'negotiate',
+                          child: Row(
+                            children: [
+                              Icon(Icons.chat_bubble_outline),
+                              SizedBox(width: 8),
+                              Text('ต่อรองราคา'),
+                            ],
+                          ),
+                        ),
+                      if (currentQuotation.status == QuotationStatus.pending ||
+                          currentQuotation.status ==
+                              QuotationStatus.negotiating)
+                        const PopupMenuItem(
+                          value: 'cancel',
+                          child: Row(
+                            children: [
+                              Icon(Icons.cancel_outlined, color: Colors.red),
+                              SizedBox(width: 8),
+                              Text(
+                                'ยกเลิก',
+                                style: TextStyle(color: Colors.red),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
                 ],
+              ),
+              Expanded(
+                child: isLoading
+                    ? const Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            CircularProgressIndicator(),
+                            SizedBox(height: 16),
+                            Text('กำลังโหลดรายละเอียด...'),
+                          ],
+                        ),
+                      )
+                    : SingleChildScrollView(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // ข้อมูลใบขอยืนยัน
+                            _buildQuotationInfoSection(),
+                            const SizedBox(height: 24),
+
+                            // รายการสินค้า
+                            _buildItemsSection(),
+                            const SizedBox(height: 24),
+
+                            // ประวัติการต่อรอง
+                            _buildNegotiationHistorySection(),
+                          ],
+                        ),
+                      ),
               ),
             ],
           ),
-          body: isLoading
-              ? const Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      CircularProgressIndicator(),
-                      SizedBox(height: 16),
-                      Text('กำลังโหลดรายละเอียด...'),
-                    ],
-                  ),
-                )
-              : SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // ข้อมูลใบขอยืนยัน
-                      _buildQuotationInfoSection(),
-                      const SizedBox(height: 24),
-
-                      // รายการสินค้า
-                      _buildItemsSection(),
-                      const SizedBox(height: 24),
-
-                      // ประวัติการต่อรอง
-                      _buildNegotiationHistorySection(),
-                    ],
-                  ),
-                ),
           bottomNavigationBar: _buildBottomActions(),
         );
       },
@@ -521,6 +533,26 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
                     const SizedBox(height: 4),
                     Text(item.itemNotes!),
                   ],
+                ),
+              ),
+            ],
+
+            // ปุ่มต่อรองราคารายสินค้า
+            if ((currentQuotation.status == QuotationStatus.pending ||
+                    currentQuotation.status == QuotationStatus.negotiating) &&
+                item.status == QuotationItemStatus.active) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () => _startItemNegotiation(item),
+                  icon: const Icon(Icons.handshake, size: 16),
+                  label: const Text('ต่อรองราคารายการนี้'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.orange.shade700,
+                    side: BorderSide(color: Colors.orange.shade300),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                  ),
                 ),
               ),
             ],
@@ -1150,7 +1182,36 @@ class _QuotationDetailScreenState extends State<QuotationDetailScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => NegotiationScreen(quotation: currentQuotation),
+        builder: (context) => MultiBlocProvider(
+          providers: [
+            BlocProvider(create: (context) => sl<NegotiationCubit>()),
+            BlocProvider(create: (context) => sl<QuotationCubit>()),
+          ],
+          child: NegotiationScreen(quotation: currentQuotation),
+        ),
+      ),
+    ).then((result) {
+      if (result == true) {
+        // ถ้าส่งข้อเสนอสำเร็จ ให้รีเฟรชข้อมูล
+        _refreshQuotation();
+      }
+    });
+  }
+
+  void _startItemNegotiation(QuotationItem item) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => MultiBlocProvider(
+          providers: [
+            BlocProvider(create: (context) => sl<NegotiationCubit>()),
+            BlocProvider(create: (context) => sl<QuotationCubit>()),
+          ],
+          child: NegotiationScreen(
+            quotation: currentQuotation,
+            specificItem: item, // ส่งรายการเฉพาะที่ต้องการต่อรอง
+          ),
+        ),
       ),
     ).then((result) {
       if (result == true) {

@@ -54,29 +54,51 @@ class QuotationApiDataSource {
           '📦 [API] Creating item: ${item.icCode} x${item.originalQuantity}',
         );
 
+        // ใช้ string escaping แบบง่าย ๆ ก่อน
+        final escapedIcCode = item.icCode.replaceAll("'", "''");
+        final escapedBarcode = item.barcode?.replaceAll("'", "''");
+        final escapedUnitCode = item.unitCode?.replaceAll("'", "''");
+        final escapedItemNotes = item.itemNotes?.replaceAll("'", "''");
+
         final query =
             '''
           INSERT INTO quotation_items (
             quotation_id, ic_code, barcode, unit_code,
             original_quantity, original_unit_price, original_total_price,
             requested_quantity, requested_unit_price, requested_total_price,
-            status, item_notes
-          ) VALUES ($quotationId, '${item.icCode}', 
-                    ${item.barcode != null ? "'${item.barcode}'" : 'NULL'}, 
-                    ${item.unitCode != null ? "'${item.unitCode}'" : 'NULL'},
-                    ${item.originalQuantity}, ${item.originalUnitPrice}, ${item.originalTotalPrice},
-                    ${item.requestedQuantity}, ${item.requestedUnitPrice}, ${item.requestedTotalPrice},
-                    '${item.status.value}', 
-                    ${item.itemNotes != null ? "'${item.itemNotes}'" : 'NULL'})
+            status, item_notes, created_at, updated_at
+          ) VALUES (
+            $quotationId, 
+            '$escapedIcCode', 
+            ${escapedBarcode != null ? "'$escapedBarcode'" : 'NULL'}, 
+            ${escapedUnitCode != null ? "'$escapedUnitCode'" : 'NULL'},
+            ${item.originalQuantity}, 
+            ${item.originalUnitPrice}, 
+            ${item.originalTotalPrice},
+            ${item.requestedQuantity}, 
+            ${item.requestedUnitPrice}, 
+            ${item.requestedTotalPrice},
+            '${item.status.value}', 
+            ${escapedItemNotes != null ? "'$escapedItemNotes'" : 'NULL'},
+            NOW(),
+            NOW()
+          )
           RETURNING id
         ''';
+
+        print('📝 [API] Executing SQL: $query');
 
         final response = await _dio.post('/pgcommand', data: {'query': query});
         print('📄 [API] Create item response: ${response.data}');
 
         if (response.statusCode != 200 || response.data['success'] != true) {
-          throw Exception('Failed to create quotation item for ${item.icCode}');
+          print('❌ [API] Failed response: ${response.data}');
+          throw Exception(
+            'Failed to create quotation item for ${item.icCode}: ${response.data['message'] ?? 'Unknown error'}',
+          );
         }
+
+        print('✅ [API] Created item ${item.icCode} successfully');
       }
 
       print('✅ [API] Successfully created all quotation items');

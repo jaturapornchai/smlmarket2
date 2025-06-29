@@ -94,7 +94,7 @@ class CartRemoteDataSource implements CartDataSource {
         RETURNING id, customer_id, status, total_amount, total_items, created_at, updated_at
       """;
 
-      final response = await dio.post('/pgcommand', data: {'query': query});
+      final response = await dio.post('/pgcommand', data: {'command': query});
 
       if (kDebugMode) {
         logger.d('🛒 [DATA_SOURCE] Create cart response: ${response.data}');
@@ -159,7 +159,7 @@ class CartRemoteDataSource implements CartDataSource {
         RETURNING id, cart_id, ic_code, barcode, unit_code, quantity, unit_price, total_price, created_at, updated_at
       """;
 
-      final response = await dio.post('/pgcommand', data: {'query': query});
+      final response = await dio.post('/pgcommand', data: {'command': query});
 
       if (kDebugMode) {
         logger.d('🛒 [DATA_SOURCE] Add to cart response: ${response.data}');
@@ -399,7 +399,7 @@ class CartRemoteDataSource implements CartDataSource {
         ) AND ic_code = '$icCode'
       """;
 
-      final response = await dio.post('/pgcommand', data: {'query': query});
+      final response = await dio.post('/pgcommand', data: {'command': query});
 
       if (kDebugMode) {
         logger.d('🛒 [DATA_SOURCE] Update quantity response: ${response.data}');
@@ -438,7 +438,7 @@ class CartRemoteDataSource implements CartDataSource {
         ) AND ic_code = '$icCode'
       """;
 
-      final response = await dio.post('/pgcommand', data: {'query': query});
+      final response = await dio.post('/pgcommand', data: {'command': query});
 
       if (kDebugMode) {
         logger.d(
@@ -482,7 +482,7 @@ class CartRemoteDataSource implements CartDataSource {
         )
       """;
 
-      final response = await dio.post('/pgcommand', data: {'query': query});
+      final response = await dio.post('/pgcommand', data: {'command': query});
 
       if (kDebugMode) {
         logger.d('🛒 [DATA_SOURCE] Clear cart response: ${response.data}');
@@ -585,7 +585,7 @@ class CartRemoteDataSource implements CartDataSource {
           WHERE i.ic_code = '${item.icCode}'
         """;
 
-        await dio.post('/pgcommand', data: {'query': itemQuery});
+        await dio.post('/pgcommand', data: {'command': itemQuery});
       }
 
       // อัปเดตสถานะตระกร้าเป็น completed
@@ -596,7 +596,7 @@ class CartRemoteDataSource implements CartDataSource {
         WHERE id = ${cart.id}
       """;
 
-      await dio.post('/pgcommand', data: {'query': updateCartQuery});
+      await dio.post('/pgcommand', data: {'command': updateCartQuery});
 
       if (kDebugMode) {
         logger.d('🛒 [DATA_SOURCE] Order created: ${order.orderNumber}');
@@ -632,7 +632,7 @@ class CartRemoteDataSource implements CartDataSource {
         WHERE id = $cartId
       """;
 
-      await dio.post('/pgcommand', data: {'query': query});
+      await dio.post('/pgcommand', data: {'command': query});
 
       if (kDebugMode) {
         logger.d('🛒 [DATA_SOURCE] Cart totals updated for cart: $cartId');

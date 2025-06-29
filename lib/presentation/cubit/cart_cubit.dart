@@ -179,6 +179,12 @@ class CartCubit extends Cubit<CartState> {
       logger.i(
         '✅ [CUBIT] Cart loaded successfully: ${items.length} items, Total: ${NumberFormatter.formatCurrency(totalAmount)}',
       );
+
+      print('🐞 DEBUG CUBIT: Emitting CartLoaded with ${items.length} items');
+      print(
+        '🐞 DEBUG CUBIT: Items list: ${items.map((e) => e.icCode).toList()}',
+      );
+
       emit(
         CartLoaded(
           items: items,

@@ -229,3 +229,19 @@ Features / ฟังก์ชัน:
 15. **Backup important files before modification** / สำรองไฟล์สำคัญก่อนการแก้ไข
 16. **Test thoroughly before suggesting file replacements** / ทดสอบอย่างละเอียดก่อนแนะนำการเปลี่ยนไฟล์
 17. **Preserve existing functionality when updating** / รักษาฟังก์ชันเดิมไว้เมื่อทำการอัปเดต
+18. **Delete test files after completion** / ในการสร้าง file เพื่อทดสอบ หรือ program ใหม่เพื่อทดสอบ เมื่อทดสอบเสร็จแล้วให้ลบไฟล์นั้นออกจากโปรเจกต์เพื่อไม่ให้มีไฟล์ที่ไม่จำเป็นอยู่ในโปรเจกต์
+
+ถ้ามีการ deploy web ขึ้น firebase ให้ใช้ firebase hosting url ให้ต่อท้ายด้วย ?openExternalBrowser=1&guid เพื่อให้เปิดใน new browser แทนที่จะเปิดใน app ใน line ส่วน guid ให้ random string ที่ไม่ซ้ำกัน เช่น `?openExternalBrowser=1&guid=1234567890`
+
+
+database postgresql 
+
+table products ไม่ต้องสนใจ เลิกใช้
+table product_categories ไม่ต้องสนใจ เลิกใช้
+
+table ar_customers มาจากระบบอื่นเอาไปใช้ได้ แต่ห้าแก้ไข
+table ic_inventory มาจากระบบอื่นเอาไปใช้ได้ แต่ห้ามแก้ไข
+table ic_inventory_barcode มาจากระบบอื่นเอาไปใช้ได้ แต่ห้ามแก้ไข
+table ic_inventory_price_formula มาจากระบบอื่นเอาไปใช้ได้ แต่ห้ามแก้ไข
+table ic_balance มาจากระบบอื่นเอาไปใช้ได้ แต่ห้ามแก้ไข
+table ic_inventory_price มาจากระบบอื่นเอาไปใช้ได้ แต่ห้ามแก้

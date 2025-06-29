@@ -6,7 +6,7 @@ import '../../utils/number_formatter.dart';
 import '../../utils/thai_date_formatter.dart';
 import '../cubit/quotation_cubit.dart';
 import '../cubit/quotation_state.dart';
-import 'quotation_detail_screen.dart';
+import '../widgets/app_navigation_bar.dart';
 
 /// หน้าจอรายการใบขอยืนยันราคาและขอยืนยันจำนวน
 class QuotationListScreen extends StatefulWidget {
@@ -43,50 +43,45 @@ class _QuotationListScreenState extends State<QuotationListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('ใบขอยืนยันราคาและขอยืนยันจำนวน'),
-        backgroundColor: Colors.blue.shade600,
-        foregroundColor: Colors.white,
-        leading: IconButton(
-          icon: const Icon(Icons.home),
-          onPressed: () {
-            // นำทางกลับไปหน้าแรก (ProductSearchScreen) แทนการกลับแบบปกติ
-            Navigator.of(
-              context,
-            ).pushNamedAndRemoveUntil('/', (route) => false);
-          },
-          tooltip: 'กลับหน้าแรก',
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.filter_list),
-            onPressed: _showFilterDialog,
+      backgroundColor: Colors.grey[50],
+      body: Column(
+        children: [
+          AppNavigationBar(
+            title: 'ใบขอยืนยันราคาและขอยืนยันจำนวน',
+            additionalActions: [
+              IconButton(
+                icon: const Icon(Icons.filter_list),
+                onPressed: _showFilterDialog,
+              ),
+              IconButton(
+                icon: const Icon(Icons.refresh),
+                onPressed: _loadQuotations,
+              ),
+            ],
           ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadQuotations,
+          Expanded(
+            child: BlocConsumer<QuotationCubit, QuotationState>(
+              listener: (context, state) {
+                if (state is QuotationError) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(state.message),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+              builder: (context, state) {
+                return Column(
+                  children: [
+                    if (filterStatus != null) _buildFilterChip(),
+                    Expanded(child: _buildBody(state)),
+                  ],
+                );
+              },
+            ),
           ),
         ],
-      ),
-      body: BlocConsumer<QuotationCubit, QuotationState>(
-        listener: (context, state) {
-          if (state is QuotationError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-        },
-        builder: (context, state) {
-          return Column(
-            children: [
-              if (filterStatus != null) _buildFilterChip(),
-              Expanded(child: _buildBody(state)),
-            ],
-          );
-        },
       ),
     );
   }
@@ -445,11 +440,6 @@ class _QuotationListScreenState extends State<QuotationListScreen> {
   }
 
   void _navigateToQuotationDetail(Quotation quotation) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => QuotationDetailScreen(quotation: quotation),
-      ),
-    );
+    Navigator.pushNamed(context, '/quotation-detail', arguments: quotation);
   }
 }

@@ -2,19 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../data/models/product_model.dart';
-import '../../utils/number_formatter.dart';
 import '../cubit/cart_cubit.dart';
-import '../cubit/cart_state.dart';
 import '../cubit/product_search_cubit.dart';
 import '../cubit/product_search_state.dart';
 import '../cubit/quotation_cubit.dart';
-import '../cubit/quotation_state.dart';
+import '../widgets/app_navigation_bar.dart';
 import '../widgets/product_grid.dart';
 import '../widgets/search_bar_widget.dart';
-import 'cart_screen.dart';
-import 'login_screen.dart';
-import 'product_detail_screen.dart';
-import 'quotation_list_screen.dart';
 
 class ProductSearchScreen extends StatefulWidget {
   const ProductSearchScreen({super.key});
@@ -25,14 +19,14 @@ class ProductSearchScreen extends StatefulWidget {
 
 class _ProductSearchScreenState extends State<ProductSearchScreen> {
   final TextEditingController _searchController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
-    // โหลดข้อมูลตระกร้าครั้งเดียวเมื่อเริ่มต้น
+    // โหลดข้อมูลตระกร้าและใบเสนอราคาครั้งเดียวเมื่อเริ่มต้น
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         context.read<CartCubit>().loadCart(customerId: '1');
-        // โหลดข้อมูลใบยืนยันราคา
         context.read<QuotationCubit>().loadQuotations(1);
       }
     });
@@ -56,10 +50,10 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
   }
 
   void _onProductTap(ProductModel product) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => ProductDetailScreen(product: product),
-      ),
+    Navigator.pushNamed(
+      context,
+      '/product/${product.code}',
+      arguments: product,
     );
   }
 
@@ -67,112 +61,21 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
     context.read<ProductSearchCubit>().loadMoreProducts();
   }
 
-  void _onCartTap() async {
-    // นำทางไปยังตระกร้า (ไม่ต้องโหลดใหม่เพราะ CartScreen จะโหลดเอง)
-    Navigator.of(
-      context,
-    ).push(MaterialPageRoute(builder: (context) => const CartScreen()));
-  }
-
-  void _onQuotationTap() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const QuotationListScreen(customerId: 1),
-      ),
-    );
-  }
-
-  void _onLoginTap() {
-    Navigator.of(
-      context,
-    ).push(MaterialPageRoute(builder: (context) => const LoginScreen()));
-  }
-
-  /// สร้าง icon ตระกร้าพร้อมแสดงจำนวนสินค้า
-  Widget _buildCartIcon(double itemCount) {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        const Icon(Icons.shopping_cart, size: 24),
-        if (itemCount > 0)
-          Positioned(
-            right: -6,
-            top: -6,
-            child: Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: Colors.red,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white, width: 2),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.2),
-                    blurRadius: 2,
-                    offset: const Offset(0, 1),
-                  ),
-                ],
-              ),
-              constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
-              child: Text(
-                itemCount > 99
-                    ? '99+'
-                    : NumberFormatter.formatQuantity(itemCount),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-
-  /// สร้าง icon ใบยืนยันราคาพร้อมแสดงจำนวน
-  Widget _buildQuotationIcon(int quotationCount) {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        const Icon(Icons.description_outlined, size: 24),
-        if (quotationCount > 0)
-          Positioned(
-            right: -6,
-            top: -6,
-            child: Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: Colors.orange,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white, width: 2),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.2),
-                    blurRadius: 2,
-                    offset: const Offset(0, 1),
-                  ),
-                ],
-              ),
-              constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
-              child: Text(
-                quotationCount > 99 ? '99+' : quotationCount.toString(),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-
   Widget _buildSearchSummary(ProductSearchState state) {
-    if (state is! ProductSearchSuccess && _searchController.text.isEmpty) {
+    if (state is! ProductSearchSuccess &&
+        state is! ProductSearchLoadingMore &&
+        _searchController.text.isEmpty) {
       return const SizedBox.shrink();
+    }
+
+    String searchText = '';
+
+    if (state is ProductSearchSuccess) {
+      searchText = state.query;
+    } else if (state is ProductSearchLoadingMore) {
+      searchText = state.query;
+    } else {
+      searchText = _searchController.text;
     }
 
     return Container(
@@ -184,8 +87,12 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
           Expanded(
             child: Text(
               state is ProductSearchSuccess
-                  ? 'พบ ${state.total} รายการ สำหรับ "${state.query}"'
-                  : 'ค้นหา "${_searchController.text}"',
+                  ? (state.products.length < state.total
+                        ? 'แสดง ${state.products.length} จาก ${state.total} รายการ สำหรับ "${state.query}"'
+                        : 'พบ ${state.total} รายการ สำหรับ "${state.query}"')
+                  : state is ProductSearchLoadingMore
+                  ? 'แสดง ${state.currentProducts.length} รายการ สำหรับ "${state.query}" (กำลังโหลดเพิ่ม...)'
+                  : 'ค้นหา "$searchText"',
               style: TextStyle(
                 fontSize: 14,
                 color: Colors.grey[600],
@@ -193,6 +100,21 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
               ),
             ),
           ),
+          // แสดงสถานะ loading more
+          if (state is ProductSearchLoadingMore)
+            Container(
+              margin: const EdgeInsets.only(left: 8),
+              child: SizedBox(
+                width: 12,
+                height: 12,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    Colors.blue.shade400,
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -212,101 +134,111 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
               ],
             ),
           );
-        }
-
-        if (state is ProductSearchError) {
+        } else if (state is ProductSearchError) {
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.error_outline, size: 64, color: Colors.red.shade300),
+                Icon(Icons.error_outline, size: 64, color: Colors.red.shade400),
                 const SizedBox(height: 16),
                 Text(
+                  'เกิดข้อผิดพลาด',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.red.shade600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
                   state.message,
-                  style: const TextStyle(fontSize: 16, color: Colors.red),
+                  style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: () => _onSearch(state.query ?? ''),
-                  child: const Text('ลองใหม่'),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    if (_searchController.text.isNotEmpty) {
+                      _onSearch(_searchController.text);
+                    }
+                  },
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('ลองใหม่'),
                 ),
               ],
             ),
           );
-        }
-
-        if (state is ProductSearchEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.search_off, size: 64, color: Colors.grey.shade400),
-                const SizedBox(height: 16),
-                const Text(
-                  'ไม่พบสินค้าที่ค้นหา',
-                  style: TextStyle(fontSize: 18, color: Colors.grey),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'ลองค้นหาด้วยคำอื่น',
-                  style: TextStyle(fontSize: 14, color: Colors.grey),
-                ),
-              ],
-            ),
-          );
-        }
-        if (state is ProductSearchSuccess ||
+        } else if (state is ProductSearchSuccess ||
             state is ProductSearchLoadingMore) {
+          // สำหรับทั้ง success และ loading more
           final products = state is ProductSearchSuccess
               ? state.products
               : (state as ProductSearchLoadingMore).currentProducts;
-          final isLoadingMore = state is ProductSearchLoadingMore;
           final hasReachedMax = state is ProductSearchSuccess
               ? state.hasReachedMax
               : false;
-          final aiEnabled = state is ProductSearchSuccess
-              ? state.aiEnabled
-              : (state as ProductSearchLoadingMore).aiEnabled;
+          final isLoadingMore = state is ProductSearchLoadingMore;
+
+          if (products.isEmpty && !isLoadingMore) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.search_off, size: 64, color: Colors.grey.shade400),
+                  const SizedBox(height: 16),
+                  Text(
+                    'ไม่พบสินค้า',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'ลองใช้คำค้นหาอื่น',
+                    style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
+                  ),
+                ],
+              ),
+            );
+          }
 
           return ProductGrid(
             products: products,
-            isAiEnabled: aiEnabled,
+            isAiEnabled: state is ProductSearchSuccess
+                ? state.aiEnabled
+                : false,
             hasReachedMax: hasReachedMax,
             isLoadingMore: isLoadingMore,
             onProductTap: _onProductTap,
             onLoadMore: _onLoadMore,
           );
-        }
-
-        // ProductSearchInitial or any other state
-        return Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.shopping_bag_outlined,
-                size: 80,
-                color: Colors.blue.shade200,
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'เริ่มค้นหาสินค้า - ระบบพร้อมใช้งาน',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.grey,
+        } else {
+          // Initial state - show welcome message
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.search, size: 64, color: Colors.blue.shade300),
+                const SizedBox(height: 16),
+                Text(
+                  'ยินดีต้อนรับสู่ SML Market',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue.shade700,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'พิมพ์ชื่อสินค้าที่คุณต้องการในช่องค้นหา',
-                style: TextStyle(fontSize: 14, color: Colors.grey),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        );
+                const SizedBox(height: 8),
+                Text(
+                  'ค้นหาสินค้าที่คุณต้องการ',
+                  style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+                ),
+              ],
+            ),
+          );
+        }
       },
     );
   }
@@ -314,53 +246,9 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'SML Market',
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue),
-        ),
-        backgroundColor: Colors.white,
-        elevation: 1,
-        surfaceTintColor: Colors.white,
-        actions: [
-          // Quotation Button with Badge
-          BlocBuilder<QuotationCubit, QuotationState>(
-            builder: (context, quotationState) {
-              int quotationCount = 0;
-              if (quotationState is QuotationLoaded) {
-                quotationCount = quotationState.quotations.length;
-              }
-
-              return IconButton(
-                onPressed: _onQuotationTap,
-                icon: _buildQuotationIcon(quotationCount),
-                tooltip: 'ใบยืนยันราคา',
-              );
-            },
-          ),
-          // Cart Button with Badge
-          BlocBuilder<CartCubit, CartState>(
-            builder: (context, cartState) {
-              double totalItemCount = 0.0;
-              if (cartState is CartLoaded) {
-                totalItemCount = cartState.totalItems;
-              }
-
-              return IconButton(
-                onPressed: _onCartTap,
-                icon: _buildCartIcon(totalItemCount),
-                tooltip: 'ตระกร้าสินค้า',
-              );
-            },
-          ),
-          // Login Button
-          IconButton(
-            onPressed: _onLoginTap,
-            icon: const Icon(Icons.login),
-            tooltip: 'เข้าสู่ระบบ',
-          ),
-          const SizedBox(width: 8),
-        ],
+      appBar: const AppNavigationBar(
+        title: 'SML Market - ค้นหาสินค้า',
+        showBackButton: false,
       ),
       body: Column(
         children: [
@@ -372,20 +260,23 @@ class _ProductSearchScreenState extends State<ProductSearchScreen> {
                 isAiEnabled: false, // ปิด AI ไว้ก่อน
                 onSearch: _onSearch,
                 onAiToggle: _onAiToggle,
-                isLoading: state is ProductSearchLoading,
               );
             },
           ),
 
-          // Search Results Summary
+          // Search Summary
           BlocBuilder<ProductSearchCubit, ProductSearchState>(
-            builder: (context, state) => _buildSearchSummary(state),
+            builder: (context, state) {
+              return _buildSearchSummary(state);
+            },
           ),
 
           // Results Section
           Expanded(
             child: BlocBuilder<ProductSearchCubit, ProductSearchState>(
-              builder: (context, state) => _buildResultsSection(state),
+              builder: (context, state) {
+                return _buildResultsSection(state);
+              },
             ),
           ),
         ],

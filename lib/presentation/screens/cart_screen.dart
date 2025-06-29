@@ -10,10 +10,12 @@ import '../../utils/service_locator.dart';
 import '../cubit/cart_cubit.dart';
 import '../cubit/cart_state.dart';
 import '../cubit/quotation_cubit.dart';
-import '../widgets/cart_item_widget_new.dart';
+import '../widgets/cart_item_widget.dart';
 import '../widgets/cart_summary_widget.dart';
 import '../widgets/empty_cart_widget.dart';
-import 'quotation_list_screen.dart';
+import '../widgets/app_navigation_bar.dart';
+import '../widgets/cart_action_popup.dart';
+import 'quick_order_screen.dart';
 
 /// 🛒 หน้าจอตระกร้าสินค้า
 /// แสดงรายการสินค้าในตระกร้า พร้อมฟังก์ชันจัดการ
@@ -47,45 +49,40 @@ class _CartScreenState extends State<CartScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      appBar: _buildAppBar(),
-      body: BlocConsumer<CartCubit, CartState>(
-        listener: _handleStateListener,
-        buildWhen: (previous, current) {
-          // Rebuild เฉพาะเมื่อ state เปลี่ยนจริงๆ
-          if (previous.runtimeType != current.runtimeType) return true;
-          if (current is CartLoaded && previous is CartLoaded) {
-            // ตรวจสอบว่าข้อมูลจริงๆ เปลี่ยนแปลงหรือไม่
-            if (previous.items.length != current.items.length) return true;
-            if (previous.totalAmount != current.totalAmount) return true;
-            if (previous.totalItems != current.totalItems) return true;
-
-            // ⭐ ตรวจสอบการเปลี่ยนแปลงของ stockQuantities
-            if (previous.stockQuantities.length !=
-                current.stockQuantities.length)
-              return true;
-            for (final icCode in current.stockQuantities.keys) {
-              if (previous.stockQuantities[icCode] !=
-                  current.stockQuantities[icCode]) {
-                return true;
-              }
-            }
-
-            // ตรวจสอบการเปลี่ยนแปลงใน items แต่ละตัว
-            for (int i = 0; i < current.items.length; i++) {
-              if (i >= previous.items.length) return true;
-              final prevItem = previous.items[i];
-              final currItem = current.items[i];
-              if (prevItem.quantity != currItem.quantity ||
-                  prevItem.totalPrice != currItem.totalPrice ||
-                  prevItem.icCode != currItem.icCode) {
-                return true;
-              }
-            }
-            return false; // ไม่มีการเปลี่ยนแปลง
-          }
-          return true;
-        },
-        builder: _buildBody,
+      body: Column(
+        children: [
+          AppNavigationBar(
+            title: 'ตระกร้าสินค้า',
+            additionalActions: [
+              BlocBuilder<CartCubit, CartState>(
+                builder: (context, state) {
+                  if (state is CartLoaded && state.items.isNotEmpty) {
+                    return IconButton(
+                      icon: const Icon(Icons.delete_outline),
+                      onPressed: () => _showClearCartDialog(),
+                      tooltip: 'ล้างตระกร้า',
+                    );
+                  }
+                  return const SizedBox.shrink();
+                },
+              ),
+            ],
+          ),
+          Expanded(
+            child: BlocConsumer<CartCubit, CartState>(
+              listener: _handleStateListener,
+              buildWhen: (previous, current) {
+                // Rebuild เฉพาะเมื่อจำเป็น
+                return previous.runtimeType != current.runtimeType ||
+                    (current is CartLoaded &&
+                        previous is CartLoaded &&
+                        (previous.items.length != current.items.length ||
+                            previous.totalAmount != current.totalAmount));
+              },
+              builder: _buildBody,
+            ),
+          ),
+        ],
       ),
       bottomNavigationBar: BlocBuilder<CartCubit, CartState>(
         buildWhen: (previous, current) {
@@ -103,33 +100,6 @@ class _CartScreenState extends State<CartScreen> {
           return const SizedBox.shrink();
         },
       ),
-    );
-  }
-
-  /// สร้าง AppBar
-  PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      title: const Text(
-        'ตระกร้าสินค้า',
-        style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
-      ),
-      backgroundColor: Colors.blue.shade600,
-      elevation: 0,
-      iconTheme: const IconThemeData(color: Colors.white),
-      actions: [
-        BlocBuilder<CartCubit, CartState>(
-          builder: (context, state) {
-            if (state is CartLoaded && state.items.isNotEmpty) {
-              return IconButton(
-                icon: const Icon(Icons.delete_outline),
-                onPressed: () => _showClearCartDialog(),
-                tooltip: 'ล้างตระกร้า',
-              );
-            }
-            return const SizedBox.shrink();
-          },
-        ),
-      ],
     );
   }
 
@@ -225,7 +195,7 @@ class _CartScreenState extends State<CartScreen> {
           totalAmount: state.totalAmount,
         ),
 
-        // รายการสินค้า
+        // รายการสินค้าในตระกร้า
         Expanded(
           child: ListView.builder(
             padding: const EdgeInsets.all(16),
@@ -233,13 +203,17 @@ class _CartScreenState extends State<CartScreen> {
             itemBuilder: (context, index) {
               final item = state.items[index];
               final qtyAvailable = state.stockQuantities[item.icCode];
+
               return CartItemWidget(
-                key: ValueKey('cart_item_${item.icCode}_${item.id}'),
+                key: Key('cart_item_${item.icCode}'),
                 item: item,
                 qtyAvailable: qtyAvailable,
-                onQuantityChanged: (newQuantity) =>
-                    _updateQuantity(item, newQuantity),
-                onRemove: () => _removeItem(item),
+                onQuantityChanged: (newQuantity) {
+                  _updateQuantity(item, newQuantity);
+                },
+                onRemove: () {
+                  _removeItem(item);
+                },
               );
             },
           ),
@@ -284,117 +258,97 @@ class _CartScreenState extends State<CartScreen> {
             ],
           ),
           const SizedBox(height: 16),
-
-          // ปุ่มเปิดใบขอยืนยันราคาและขอยืนยันจำนวน
-          SizedBox(
-            width: double.infinity,
-            height: 50,
-            child: ElevatedButton(
-              onPressed: () => _proceedToCheckout(state),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green.shade600,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 2,
-              ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.shopping_cart_checkout, size: 24),
-                  SizedBox(width: 8),
-                  Text(
-                    'ดำเนินการเปิดใบขอยืนยันราคาและขอยืนยันจำนวน',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          Column(
+            children: [
+              // ปุ่มขั้นตอนถัดไป (เปิด Popup)
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: () => _showActionPopup(state),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue.shade600,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 2,
                   ),
-                ],
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.arrow_forward, size: 20),
+                      SizedBox(width: 8),
+                      Text(
+                        'ขั้นตอนถัดไป',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  /// อัพเดทจำนวนสินค้า
-  void _updateQuantity(CartItemModel item, double newQuantity) {
-    if (newQuantity <= 0.0) {
-      _removeItem(item);
+  /// แสดง Popup สำหรับเลือกขั้นตอนต่อไป
+  void _showActionPopup(CartLoaded state) {
+    CartActionPopup.show(
+      context,
+      onQuickOrder: () {
+        Navigator.of(context).pop(); // ปิด popup
+        _proceedToQuickOrder(state);
+      },
+      onNegotiate: () {
+        Navigator.of(context).pop(); // ปิด popup
+        _createQuotationForNegotiation(state);
+      },
+      onCreateQuotation: () {
+        Navigator.of(context).pop(); // ปิด popup
+        _proceedToCreateQuotation(state);
+      },
+      totalAmount: state.totalAmount,
+      itemCount: state.items.length,
+    );
+  }
+
+  /// ดำเนินการสั่งซื้อทันที (Quick Order)
+  void _proceedToQuickOrder(CartLoaded state) {
+    _logger.d('Proceeding to Quick Order with ${state.items.length} items');
+
+    if (state.items.isEmpty) {
+      _showErrorSnackBar('ไม่มีสินค้าในตะกร้า');
       return;
     }
 
-    context.read<CartCubit>().updateCartItemQuantity(
-      icCode: item.icCode,
-      newQuantity: newQuantity,
-    );
-
-    _logger.d('Update quantity for ${item.icCode}: $newQuantity');
-  }
-
-  /// ลบสินค้าออกจากตระกร้า
-  void _removeItem(CartItemModel item) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('ยืนยันการลบ'),
-        content: Text('คุณต้องการลบ "${item.icCode}" ออกจากตระกร้าหรือไม่?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('ยกเลิก'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              context.read<CartCubit>().removeFromCart(icCode: item.icCode);
-              _logger.d('Remove item: ${item.icCode}');
-            },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('ลบ'),
-          ),
-        ],
+    // นำทางไปหน้า QuickOrderScreen
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => QuickOrderScreen(
+          cartItems: state.items,
+          totalAmount: state.totalAmount,
+          customerId: 1, // TODO: ใช้ customer ID จริงจากการ login
+        ),
       ),
     );
   }
 
-  /// แสดง Dialog ยืนยันการล้างตระกร้า
-  void _showClearCartDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('ล้างตระกร้า'),
-        content: const Text('คุณต้องการล้างสินค้าในตระกร้าทั้งหมดหรือไม่?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('ยกเลิก'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              context.read<CartCubit>().clearCart();
-              _logger.d('Clear cart');
-            },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('ล้างทั้งหมด'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// ดำเนินการเปิดใบขอยืนยันราคาและขอยืนยันจำนวน
-  void _proceedToCheckout(CartLoaded state) {
+  /// ดำเนินการสร้างใบเสนอราคาโดยตรง
+  void _proceedToCreateQuotation(CartLoaded state) {
     // TODO: Navigate to quotation confirmation screen
-    _logger.d(
-      'Opening price and quantity confirmation request with ${state.items.length} items',
-    );
+    _logger.d('Creating direct quotation with ${state.items.length} items');
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('ดำเนินการเปิดใบขอยืนยันราคาและขอยืนยันจำนวน'),
+        title: const Text('สร้างใบเสนอราคา'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -405,7 +359,7 @@ class _CartScreenState extends State<CartScreen> {
               'ยอดรวม: ${NumberFormatter.formatCurrency(state.totalAmount)}',
             ),
             const SizedBox(height: 16),
-            const Text('ต้องการเปิดใบขอยืนยันราคาและขอยืนยันจำนวนหรือไม่?'),
+            const Text('ต้องการสร้างใบเสนอราคาหรือไม่?'),
           ],
         ),
         actions: [
@@ -422,7 +376,7 @@ class _CartScreenState extends State<CartScreen> {
               backgroundColor: Colors.green.shade600,
               foregroundColor: Colors.white,
             ),
-            child: const Text('เปิดใบขอยืนยัน'),
+            child: const Text('สร้างใบเสนอราคา'),
           ),
         ],
       ),
@@ -503,13 +457,10 @@ class _CartScreenState extends State<CartScreen> {
 
       // นำทางไปหน้ารายการใบยืนยันราคา
       if (mounted) {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => BlocProvider.value(
-              value: quotationCubit,
-              child: const QuotationListScreen(customerId: 1),
-            ),
-          ),
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/quotation-list',
+          ModalRoute.withName('/'),
         );
       }
 
@@ -524,6 +475,231 @@ class _CartScreenState extends State<CartScreen> {
         'เกิดข้อผิดพลาดในการสร้างใบยืนยันราคา: ${e.toString()}',
       );
     }
+  }
+
+  /// สร้างใบขอยืนยันราคาเพื่อต่อรองราคา
+  void _createQuotationForNegotiation(CartLoaded state) {
+    _logger.d(
+      'Creating quotation for negotiation with ${state.items.length} items',
+    );
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('สร้างใบขอยืนยันราคาเพื่อต่อรองราคา'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('จำนวนสินค้า: ${state.totalItems} ชิ้น'),
+            const SizedBox(height: 8),
+            Text(
+              'ยอดรวม: ${NumberFormatter.formatCurrency(state.totalAmount)}',
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'ระบบจะสร้างใบขอยืนยันราคาและเปิดหน้าต่อรองราคาให้คุณ',
+              style: TextStyle(color: Colors.grey),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('ยกเลิก'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _navigateToQuotationForNegotiation(state);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange.shade600,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('เริ่มต่อรองราคา'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// นำทางไปหน้าต่อรองราคา
+  void _navigateToQuotationForNegotiation(CartLoaded state) async {
+    if (!mounted) return; // ตรวจสอบว่า widget ยังติดตั้งอยู่หรือไม่
+
+    // ใช้ Navigator แบบง่าย ๆ โดยตรง
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Row(
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(width: 20),
+            Text('กำลังสร้างใบยืนยันราคา...'),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      _logger.d(
+        'Creating quotation for negotiation with ${state.items.length} items',
+      );
+
+      // ตรวจสอบข้อมูลก่อนสร้าง
+      if (state.items.isEmpty) {
+        if (mounted) Navigator.pop(context);
+        _showErrorSnackBar('ไม่มีสินค้าในตะกร้า');
+        return;
+      }
+
+      if (state.cartId == null) {
+        if (mounted) Navigator.pop(context);
+        _showErrorSnackBar('ไม่พบข้อมูลตระกร้า');
+        return;
+      }
+
+      // สร้างใบยืนยันราคาเพื่อต่อรองราคา
+      final quotationCubit = sl<QuotationCubit>();
+
+      // สร้างข้อมูลใบยืนยันราคา
+      final quotationItems = state.items
+          .map(
+            (item) => QuotationItem(
+              id: 0,
+              quotationId: 0,
+              icCode: item.icCode,
+              barcode: item.barcode,
+              unitCode: item.unitCode,
+              originalQuantity: item.quantity,
+              originalUnitPrice: item.unitPrice ?? 0.0,
+              originalTotalPrice: item.totalPrice ?? 0.0,
+              requestedQuantity: item.quantity,
+              requestedUnitPrice: item.unitPrice ?? 0.0,
+              requestedTotalPrice: item.totalPrice ?? 0.0,
+              status: QuotationItemStatus.active,
+              createdAt: DateTime.now(),
+              updatedAt: DateTime.now(),
+            ),
+          )
+          .toList();
+
+      final quotation = Quotation(
+        id: 0,
+        cartId: state.cartId!,
+        customerId: 1,
+        quotationNumber: '',
+        status: QuotationStatus.pending,
+        totalAmount: state.totalAmount,
+        totalItems: state.totalItems,
+        originalTotalAmount: state.totalAmount,
+        notes: 'สร้างจากตะกร้าสินค้าเพื่อต่อรองราคา',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        items: quotationItems,
+      );
+
+      // สร้างใบยืนยันราคา
+      final createdQuotation = await quotationCubit.createQuotation(
+        quotation,
+        quotationItems,
+      );
+      print('🔍 [CART] After createQuotation, result: ${createdQuotation?.id}');
+      print(
+        '🔍 [CART] Quotation items count: ${createdQuotation?.items.length ?? 0}',
+      );
+
+      // ปิด loading dialog
+      if (mounted) Navigator.pop(context);
+
+      if (createdQuotation != null && createdQuotation.items.isNotEmpty) {
+        // สร้างสำเร็จและมีรายการสินค้า
+        print('🔍 [CART] Quotation created successfully, clearing cart...');
+
+        // ลบรายการในตะกร้าทั้งหมด
+        if (mounted) {
+          await context.read<CartCubit>().clearCart();
+          print('✅ [CART] Cart cleared successfully');
+
+          // ไปหน้าต่อรองราคาทันที
+          print('🔍 [CART] Navigating to NegotiationScreen immediately');
+
+          // ใช้ pushReplacement เพื่อแทนที่หน้าปัจจุบัน
+          Navigator.pushReplacementNamed(
+            context,
+            '/negotiation',
+            arguments: {'quotation': createdQuotation},
+          );
+
+          // แสดงข้อความสำเร็จใน negotiation screen
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('สร้างใบยืนยันราคาเรียบร้อย เริ่มต่อรองราคาได้เลย'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      } else {
+        // ไม่สำเร็จ
+        _showErrorSnackBar('ไม่สามารถสร้างใบยืนยันราคาได้ กรุณาลองใหม่');
+      }
+    } catch (e) {
+      // ปิด loading dialog
+      if (mounted) {
+        try {
+          Navigator.pop(context);
+        } catch (_) {}
+      }
+
+      _logger.e('Error creating quotation for negotiation: $e');
+      _showErrorSnackBar('เกิดข้อผิดพลาดในการสร้างใบยืนยันราคา: $e');
+    }
+  }
+
+  /// อัพเดทจำนวนสินค้า
+  void _updateQuantity(CartItemModel item, double newQuantity) {
+    if (newQuantity <= 0.0) {
+      _removeItem(item);
+      return;
+    }
+
+    context.read<CartCubit>().updateCartItemQuantity(
+      icCode: item.icCode,
+      newQuantity: newQuantity,
+    );
+  }
+
+  /// ลบสินค้าออกจากตะกร้า
+  void _removeItem(CartItemModel item) {
+    context.read<CartCubit>().removeFromCart(icCode: item.icCode);
+  }
+
+  /// แสดง Dialog ยืนยันการล้างตะกร้า
+  void _showClearCartDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('ยืนยันการล้างตะกร้า'),
+        content: const Text('คุณต้องการลบสินค้าทั้งหมดออกจากตะกร้าหรือไม่?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('ยกเลิก'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              context.read<CartCubit>().clearCart(customerId: '1');
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('ล้างทั้งหมด'),
+          ),
+        ],
+      ),
+    );
   }
 
   /// แสดง Success SnackBar

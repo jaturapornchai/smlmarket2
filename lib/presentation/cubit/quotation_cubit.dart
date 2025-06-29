@@ -40,11 +40,14 @@ class QuotationCubit extends Cubit<QuotationState> {
   }
 
   /// สร้างใบขอยืนยันราคาใหม่
-  Future<void> createQuotation(
+  Future<Quotation?> createQuotation(
     Quotation quotation,
     List<QuotationItem> items,
   ) async {
     print('🔍 [QUOTATION_CUBIT] Creating quotation with ${items.length} items');
+    print(
+      '🔍 [QUOTATION_CUBIT] Items: ${items.map((e) => '${e.icCode}:${e.originalQuantity}').toList()}',
+    );
     emit(QuotationCreating());
     try {
       // สร้างใบขอยืนยันราคา
@@ -59,14 +62,22 @@ class QuotationCubit extends Cubit<QuotationState> {
 
       // โหลดข้อมูลใหม่
       print('🔍 [QUOTATION_CUBIT] Step 3: Loading quotation details...');
-      await loadQuotationDetails(quotationId);
+      final createdQuotation = await _dataSource.getQuotationWithDetails(
+        quotationId,
+      );
       print('✅ [QUOTATION_CUBIT] Step 3 completed: Details loaded');
+      print(
+        '🔍 [QUOTATION_CUBIT] Created quotation has ${createdQuotation?.items.length ?? 0} items',
+      );
 
       emit(QuotationCreated(quotationId));
       print('🎉 [QUOTATION_CUBIT] Quotation creation completed successfully');
+
+      return createdQuotation;
     } catch (e) {
       print('❌ [QUOTATION_CUBIT] Error creating quotation: $e');
       emit(QuotationError('เกิดข้อผิดพลาดในการสร้างใบขอยืนยันราคา: $e'));
+      return null;
     }
   }
 

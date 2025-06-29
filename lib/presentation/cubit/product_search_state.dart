@@ -45,6 +45,9 @@ class ProductSearchSuccess extends ProductSearchState {
   @override
   List<Object?> get props => [products, query, aiEnabled, total, hasReachedMax];
 
+  // เพิ่ม getter สำหรับความเข้ากันได้
+  bool get isLoadingMore => false;
+
   ProductSearchSuccess copyWith({
     List<ProductModel>? products,
     String? query,

@@ -36,17 +36,30 @@ class _NegotiationScreenState extends State<NegotiationScreen> {
   }
 
   void _initializeNegotiations() {
+    print('🐞 DEBUG NegotiationScreen: Initializing negotiations');
+    print('🐞 DEBUG: Quotation ID: ${widget.quotation.id}');
+    print('🐞 DEBUG: Quotation has ${widget.quotation.items.length} items');
+
     if (widget.specificItem != null) {
+      print(
+        '🐞 DEBUG: Negotiating specific item: ${widget.specificItem!.icCode}',
+      );
       // ต่อรองรายการเดียว
       _itemNegotiations = [
         ItemNegotiation.fromQuotationItem(widget.specificItem!),
       ];
     } else {
+      print('🐞 DEBUG: Negotiating all quotation items');
       // ต่อรองทั้งใบ
       _itemNegotiations = widget.quotation.items
           .where((item) => item.status == QuotationItemStatus.active)
           .map((item) => ItemNegotiation.fromQuotationItem(item))
           .toList();
+    }
+
+    print('🐞 DEBUG: Created ${_itemNegotiations.length} item negotiations');
+    for (var i = 0; i < _itemNegotiations.length; i++) {
+      print('🐞 DEBUG: Item ${i + 1}: ${_itemNegotiations[i].icCode}');
     }
   }
 
@@ -165,9 +178,39 @@ class _NegotiationScreenState extends State<NegotiationScreen> {
           ],
         ),
         const SizedBox(height: 12),
-        ..._itemNegotiations.map(
-          (negotiation) => _buildItemNegotiationCard(negotiation),
-        ),
+
+        // แสดงรายการสินค้า หรือข้อความเมื่อไม่มีสินค้า
+        if (_itemNegotiations.isEmpty)
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.warning_amber_outlined,
+                    size: 48,
+                    color: Colors.orange.shade600,
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'ไม่พบรายการสินค้าที่สามารถต่อรองได้',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'อาจเป็นเพราะข้อมูลใบเสนอราคายังไม่ได้โหลดครบถ้วน\nหรือไม่มีรายการที่เปิดให้ต่อรอง',
+                    style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          )
+        else
+          ..._itemNegotiations.map(
+            (negotiation) => _buildItemNegotiationCard(negotiation),
+          ),
       ],
     );
   }
