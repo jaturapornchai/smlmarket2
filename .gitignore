@@ -8,9 +8,29 @@
 .build/
 .buildlog/
 .history
-.svn/
-.swiftpm/
-migrate_working_dir/
+
+# Test files and temporary documents
+test_*.json
+check_*.json
+create_*.json
+insert_*.json
+add_*.json
+*_SUMMARY.md
+*_FIXES.md
+*_IMPLEMENTATION.md
+*_COMPLETED.md
+*_MIGRATION.md
+quantity_selector_fix_log.txt
+run_with_logs.bat
+generate_models.bat
+
+# Test dart files
+test_*.dart
+*_test_*.dart
+*_debug*.dart
+verify_*.dart
+*_old.dart
+*_new.dart
 
 # IntelliJ related
 *.iml
